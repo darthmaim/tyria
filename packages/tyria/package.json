@@ -4,6 +4,8 @@
   "description": "Raster tile map viewer",
   "main": "dist/index.js",
   "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs",
+    "dev": "tsup src/index.ts --format esm --watch & live-server --ignore=src --mount=/dist:./dist dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -23,5 +25,10 @@
   "bugs": {
     "url": "https://github.com/darthmaim/tyria/issues"
   },
-  "homepage": "https://github.com/darthmaim/tyria#readme"
+  "homepage": "https://github.com/darthmaim/tyria#readme",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "tsup": "^8.1.0",
+    "typescript": "^5.4.5"
+  }
 }
