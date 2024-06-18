@@ -4,13 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tyria</title>
-  <script type="module">
-    import { Tyria } from '/dist/index.mjs';
-
-    const map = new Tyria();
-  </script>
 </head>
 <body>
-  Test!
+  <div id="map" style="height: 800px;"></div>
+  <script type="module">
+    import { Tyria, TileLayer } from '/dist/index.mjs';
+
+    const map = new Tyria(document.getElementById('map'), {
+      backgroundColor: '#ddd'
+    });
+
+    map.addLayer(new TileLayer());
+
+    window.map = map;
+  </script>
 </body>
 </html>
