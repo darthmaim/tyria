@@ -35,7 +35,8 @@ export class Tyria {
         const deltaX = e.clientX - lastPoint[0];
         const deltaY = e.clientY - lastPoint[1];
 
-        const delta = this.unproject([deltaX, deltaY]);
+        const dpr = window.devicePixelRatio || 1;
+        const delta = this.unproject([deltaX * dpr, deltaY * dpr]);
 
         this.center[0] += delta[0];
         this.center[1] += delta[1];
@@ -93,14 +94,13 @@ export class Tyria {
       throw new Error('Could not get canvas context');
     }
 
-    const scale = window.devicePixelRatio || 1;
     const width = this.canvas.width;
     const height = this.canvas.height;
     const translate = this.project(this.center);
     const translateX = translate[0] + (width / 2);
     const translateY = translate[1] + (height / 2);
 
-    const transform = new DOMMatrix([scale, 0, 0, scale, translateX, translateY]);
+    const transform = new DOMMatrix([1, 0, 0, 1, translateX, translateY]);
 
     // render layers
     const renderContext: LayerRenderContext = {
