@@ -18,9 +18,6 @@ export interface LayerRenderContext {
     width: number,
     /** height of the map in px */
     height: number,
-
-    /** bounds of the map in map coordinates */
-    visibleBounds: Bounds,
   },
   project: (coordinate: Coordinate) => Coordinate,
   unproject: (point: Coordinate) => Coordinate,

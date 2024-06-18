@@ -5,12 +5,12 @@ import { Bounds, Coordinate } from './types';
 export class Tyria {
   canvas: HTMLCanvasElement;
 
-  zoom = 0;
+  zoom = 1;
   center: Coordinate = [0, 0];
   layers: Layer[] = [];
 
   constructor(private container: HTMLElement, public readonly options: TyriaMapOptions) {
-    this.createCanvas(container);
+    this.createCanvas(this.container);
     this.render();
   }
 
@@ -35,15 +35,55 @@ export class Tyria {
         const deltaX = e.clientX - lastPoint[0];
         const deltaY = e.clientY - lastPoint[1];
 
-        this.center[0] += deltaX;
-        this.center[1] += deltaY;
+        const delta = this.unproject([deltaX, deltaY]);
+
+        this.center[0] += delta[0];
+        this.center[1] += delta[1];
         this.render();
 
         lastPoint = [e.clientX, e.clientY];
       }
     });
+    this.canvas.addEventListener('wheel', (e) => {
+      if(e.deltaY > 0) {
+        this.zoom--;
+        this.render();
+      } else if(e.deltaY < 0) {
+        this.zoom++;
+        this.render();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      const width = container.offsetWidth;
+      const height = container.offsetHeight;
+      const dpr = window.devicePixelRatio || 1;
+
+      this.canvas.style.width = CSS.px(width).toString();
+      this.canvas.style.height = CSS.px(height).toString();
+      this.canvas.width = container.offsetWidth * dpr;
+      this.canvas.height = container.offsetHeight * dpr;
+
+      this.render()
+    });
 
     container.appendChild(this.canvas);
+  }
+
+  /** projects geographical coordinates to pixels */
+  project([x, y]: Coordinate): Coordinate {
+    // 0,0 -> 0,0
+    // 81920, 114688 -> 640, -896
+    const zoomFactor = 2 ** this.zoom;
+    return [-x / 128 * zoomFactor, -y / 128 * zoomFactor];
+  }
+
+  /** projects pixels to geographical coordinates */
+  unproject([x, y]: Coordinate): Coordinate {
+    // 0,0 -> 0,0
+    // 640, -896 -> 81920, 114688
+    const zoomFactor = 2 ** this.zoom;
+    return [-x * 128 / zoomFactor, -y * 128 / zoomFactor];
   }
 
   private render() {
@@ -56,26 +96,11 @@ export class Tyria {
     const scale = window.devicePixelRatio || 1;
     const width = this.canvas.width;
     const height = this.canvas.height;
-    const translateX = this.center[0] + (width / 2);
-    const translateY = this.center[1] + (height / 2);
+    const translate = this.project(this.center);
+    const translateX = translate[0] + (width / 2);
+    const translateY = translate[1] + (height / 2);
 
     const transform = new DOMMatrix([scale, 0, 0, scale, translateX, translateY]);
-    const inverseTransform = DOMMatrix.fromMatrix(transform).inverse();
-
-    const project = ([x, y]: Coordinate): Coordinate => {
-      const transformed = transform.transformPoint({ x, y });
-      return [transformed.x, transformed.y];
-    };
-
-    const unproject = ([x, y]: Coordinate): Coordinate => {
-      const transformed = inverseTransform.transformPoint({ x, y });
-      return [transformed.x, transformed.y];
-    };
-
-    const visibleBounds: Bounds = [
-      unproject([0, 0]),
-      unproject([width, height])
-    ];
 
     // render layers
     const renderContext: LayerRenderContext = {
@@ -85,10 +110,9 @@ export class Tyria {
         zoom: this.zoom,
         width,
         height,
-        visibleBounds,
       },
-      project,
-      unproject,
+      project: this.project.bind(this),
+      unproject: this.unproject.bind(this),
     }
 
     // fill with background
@@ -101,11 +125,39 @@ export class Tyria {
       layer.render(renderContext);
     }
 
+    ctx.setTransform(transform);
+
+    // render bounds
+    const bounds = this.project([81920, 114688])
+    ctx.strokeStyle = 'lime';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, -bounds[0], -bounds[1]);
+
     ctx.resetTransform();
+
+    ctx.fillStyle = 'lime';
+    ctx.fillRect(width / 2 - 4, height / 2 - 4, 8, 8);
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`${this.project(this.center)[0]}, ${this.project(this.center)[1]} px`, width / 2 + 8, height / 2);
+    ctx.fillText(`${this.center[0]}, ${this.center[1]} coord`, width / 2 + 8, height / 2 + 16);
+    ctx.fillText(`zoom ${this.zoom}`, width / 2 + 8, height / 2 + 32);
   }
 
   addLayer(layer: Layer) {
     this.layers.push(layer);
+    this.render();
+  }
+
+  zoomIn(delta = 1) {
+    this.zoom = this.options.maxZoom ? Math.min(this.options.maxZoom, this.zoom + delta) : this.zoom + delta;
+    this.render();
+  }
+
+  zoomOut(delta = 1) {
+    this.zoom = this.options.minZoom ? Math.max(this.options.minZoom, this.zoom - delta) : this.zoom - delta;
     this.render();
   }
 }
