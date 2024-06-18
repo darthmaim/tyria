@@ -23,8 +23,18 @@ export class TileLayer implements Layer {
     context.font = 'bold 16px sans-serif'
 
     const center = project(state.center);
-    const tileTopLeft = [Math.floor((-center[0] - (state.width / 2)) / tileSize), Math.floor((-center[1] - (state.height / 2)) / tileSize)];
-    const tileBottomRight = [Math.floor((-center[0] + (state.width / 2)) / tileSize), Math.floor((-center[1] + (state.height / 2)) / tileSize)];
+    const boundsTopLeft = project(this.options.bounds?.[0] ?? [0, 0]);
+    const boundsBottomRight = project(this.options.bounds?.[1] ?? [0, 0]);
+
+    const topLeftX = Math.max(-center[0] - state.width / 2, boundsTopLeft[0]);
+    const topLeftY = Math.max(-center[1] - state.height / 2, boundsTopLeft[1]);
+
+    // TODO: check why there is always one more tile loaded than necessary
+    const bottomRightX = Math.min(-center[0] + state.width / 2, -boundsBottomRight[0]);
+    const bottomRightY = Math.min(-center[1] + state.width / 2, -boundsBottomRight[1]);
+
+    const tileTopLeft = [Math.floor(topLeftX / tileSize), Math.floor(topLeftY / tileSize)];
+    const tileBottomRight = [Math.floor(bottomRightX / tileSize), Math.floor(bottomRightY / tileSize)];
 
     for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
       for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
