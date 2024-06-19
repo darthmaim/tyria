@@ -22,8 +22,8 @@ export class Tyria {
     const height = container.offsetHeight;
     const dpr = window.devicePixelRatio || 1;
 
-    this.canvas.style.width = CSS.px(width).toString();
-    this.canvas.style.height = CSS.px(height).toString();
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
     this.canvas.width = container.offsetWidth * dpr;
     this.canvas.height = container.offsetHeight * dpr;
 
