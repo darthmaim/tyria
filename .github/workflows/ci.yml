@@ -1,0 +1,42 @@
+name: CI
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: latest
+        cache: npm
+    - name: Install dependencies
+      run: npm ci
+    - name: Build
+      run: npm run build
+    - name: Build github pages
+      run: |
+        mkdir -p /tmp/github-pages/dist
+        cp packages/tyria/dev/index.html /tmp/github-pages/index.html
+        cp packages/tyria/dist/index.mjs /tmp/github-pages/dist/index.mjs
+    - name: Upload github pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: /tmp/github-pages/
+
+  deploy-gh-pages:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages-demo
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
