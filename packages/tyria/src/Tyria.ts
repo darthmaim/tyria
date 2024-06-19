@@ -124,8 +124,8 @@ export class Tyria {
     const width = this.canvas.width;
     const height = this.canvas.height;
     const translate = this.project(this.center);
-    const translateX = translate[0] + (width / 2);
-    const translateY = translate[1] + (height / 2);
+    const translateX = Math.floor(translate[0] + (width / 2));
+    const translateY = Math.floor(translate[1] + (height / 2));
 
     const transform = new DOMMatrix([1, 0, 0, 1, translateX, translateY]);
 
