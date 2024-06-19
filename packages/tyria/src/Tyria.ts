@@ -11,7 +11,7 @@ export class Tyria {
 
   constructor(private container: HTMLElement, public readonly options: TyriaMapOptions) {
     this.createCanvas(this.container);
-    this.render();
+    this.queueRender();
   }
 
   private createCanvas(container: HTMLElement) {
@@ -40,7 +40,7 @@ export class Tyria {
 
         this.center[0] += delta[0];
         this.center[1] += delta[1];
-        this.render();
+        this.queueRender();
 
         lastPoint = [e.clientX, e.clientY];
       }
@@ -85,7 +85,35 @@ export class Tyria {
     return [-x * 128 / zoomFactor, -y * 128 / zoomFactor];
   }
 
+  private _renderQueued: false | 'next-frame' | 'low-priority' = false;
+  private _renderQueueTimeout: number;
+  private queueRender(priority: 'next-frame' | 'low-priority' = 'next-frame') {
+    // don't queue if it is already queued with same or higher priority
+    if(this._renderQueued === priority || this._renderQueued === 'next-frame') {
+      return;
+    }
+
+    if(priority === 'next-frame') {
+      // cancel low priority request if we get a high priority one
+      if(this._renderQueued === 'low-priority') {
+        clearTimeout(this._renderQueueTimeout);
+      }
+
+      // request render in next animation frame
+      requestAnimationFrame(() => this.render());
+    } else {
+      // render in 80ms (5 frames at ~60fps), so we can collect some more queueRenders until then (for example from image loading promises resolving)
+      this._renderQueueTimeout = setTimeout(() => this.render(), 80);
+    }
+
+    // store that render is already queued so we don't queue twice
+    this._renderQueued = priority;
+  }
+
   private render() {
+    // we are doing it, remove queue status
+    this._renderQueued = false;
+
     const ctx = this.canvas.getContext('2d');
 
     if(!ctx) {
@@ -111,7 +139,7 @@ export class Tyria {
       },
       project: this.project.bind(this),
       unproject: this.unproject.bind(this),
-      registerPromise: (promise) => promise.then(() => this.render()),
+      registerPromise: (promise) => promise.then(() => this.queueRender('low-priority')),
     }
 
     // fill with background
@@ -147,16 +175,16 @@ export class Tyria {
 
   addLayer(layer: Layer) {
     this.layers.push(layer);
-    this.render();
+    this.queueRender();
   }
 
   zoomIn(delta = 1) {
     this.zoom = this.options.maxZoom ? Math.min(this.options.maxZoom, this.zoom + delta) : this.zoom + delta;
-    this.render();
+    this.queueRender();
   }
 
   zoomOut(delta = 1) {
     this.zoom = this.options.minZoom ? Math.max(this.options.minZoom, this.zoom - delta) : this.zoom - delta;
-    this.render();
+    this.queueRender();
   }
 }
