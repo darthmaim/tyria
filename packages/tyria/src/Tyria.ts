@@ -183,14 +183,35 @@ export class Tyria {
     this.queueRender();
   }
 
-  zoomIn(delta = 1) {
-    this.zoom = this.options.maxZoom ? Math.min(this.options.maxZoom, this.zoom + delta) : this.zoom + delta;
+  setZoom(zoom: number) {
+    this.zoom = zoom;
+
+    // ensure lower bound
+    if(this.options.minZoom) {
+      this.zoom = Math.max(this.options.minZoom, this.zoom);
+    }
+
+    // ensure upper bound
+    if(this.options.maxZoom) {
+      this.zoom = Math.min(this.options.maxZoom, this.zoom);
+    }
+
+    // make sure the center is on full pixels
+    const centerCoordinates = this.project(this.center);
+    centerCoordinates[0] = Math.round(centerCoordinates[0]);
+    centerCoordinates[1] = Math.round(centerCoordinates[1]);
+    this.center = this.unproject(centerCoordinates);
+
+    // queue render
     this.queueRender();
   }
 
+  zoomIn(delta = 1) {
+    this.setZoom(this.zoom + delta);
+  }
+
   zoomOut(delta = 1) {
-    this.zoom = this.options.minZoom ? Math.max(this.options.minZoom, this.zoom - delta) : this.zoom - delta;
-    this.queueRender();
+    this.setZoom(this.zoom - delta);
   }
 
   setDebug(debug: boolean) {
