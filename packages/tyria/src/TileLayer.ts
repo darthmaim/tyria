@@ -52,10 +52,12 @@ export class TileLayer implements Layer {
           registerPromise(fetchPromise);
 
           this.tileCache[tileCacheKey] = { state: 'loading' };
-        } else if(tile.state === 'loading') {
-          // tile is already loading, skipping for now (later render other zoom layer instead)
-          continue;
-        } else if(tile.state === 'error') {
+        }
+
+        if(tile?.state === 'done') {
+          // draw tile
+          context.drawImage(tile.image, x * tileSize, y * tileSize, tileSize, tileSize);
+        } else if(tile?.state === 'error') {
           // tile loading errored...
           context.beginPath();
           context.rect(x * tileSize, y * tileSize, tileSize, tileSize);
@@ -64,14 +66,36 @@ export class TileLayer implements Layer {
           context.strokeStyle = 'red';
           context.lineWidth = 1;
           context.stroke();
-        } else if(tile.state === 'done') {
-          // draw tile
-          context.drawImage(tile.image, x * tileSize, y * tileSize, tileSize, tileSize);
+        } else {
+          // render fallback
+          const fallback = this.getFallbackTile(x, y, state.zoom);
+
+          if(fallback) {
+            context.drawImage(fallback.image, fallback.x * tileSize, fallback.y * tileSize, fallback.scale * tileSize, fallback.scale * tileSize, x * tileSize, y * tileSize, tileSize, tileSize);
+          }
         }
 
         this.renderDebugGrid(context, x, y, state.zoom, tileSize, tileSize);
       }
     }
+  }
+
+  private getFallbackTile(x, y, zoom, scale = 1): { x: number, y: number, scale, image: ImageBitmap } | undefined {
+    if(zoom === 0) {
+      return;
+    }
+
+    const fallbackX = x / 2;
+    const fallbackY = y / 2;
+
+    const cacheKey = `${Math.floor(fallbackX)},${Math.floor(fallbackY)},${zoom - 1}` as const;
+    const cached = this.tileCache[cacheKey];
+
+    if(cached?.state === 'done') {
+      return { image: cached.image, scale: scale * 0.5, x: fallbackX % 1, y: fallbackY % 1 };
+    }
+
+    return this.getFallbackTile(fallbackX, fallbackY, zoom - 1, scale * 0.5)
   }
 
   renderDebugGrid(context: CanvasRenderingContext2D, x: number, y: number, zoom: number, width: number, height: number) {
