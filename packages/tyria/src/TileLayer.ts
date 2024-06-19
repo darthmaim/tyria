@@ -15,9 +15,20 @@ export class TileLayer implements Layer {
   constructor(private options: TileLayerOptions) {}
 
   render({ context, state, project, registerPromise }: LayerRenderContext) {
+    // get the zoom level of tiles to use (prefer higher resolution)
     const zoom = Math.ceil(state.zoom);
+
+    // the size of the tiles we are loading
     const tileSize = this.options.tileSize ?? 256;
-    const renderedTileSize = tileSize * (2 ** (state.zoom % 1));
+
+    // get the rendered size of a tile
+    // if we are at a integer zoom level, just use tileSize
+    // otherwise, we need to scale the size of the tile correctly
+    const renderedTileSize = state.zoom % 1 === 0 ? tileSize : 0.5 * (2 ** (state.zoom % 1)) * tileSize;
+
+    if(renderedTileSize < tileSize / 2) {
+      return;
+    }
 
     const center = project(state.center);
     const boundsTopLeft = project(this.options.bounds?.[0] ?? [0, 0]);
