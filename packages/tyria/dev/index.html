@@ -7,6 +7,10 @@
 </head>
 <body>
   <div id="map" style="height: 800px;"></div>
+  <label>
+    <input type="checkbox" id="debug"/>
+    debug overlays
+  </label>
   <script type="module">
     import { Tyria, TileLayer } from '/dist/index.mjs';
 
@@ -20,6 +24,8 @@
       source: (x, y, z) => `https://tiles.gw2.io/1/1/${z}/${x}/${y}.jpg`,
       bounds: [[0, 0], [81920, 114688]],
     }));
+
+    document.getElementById('debug').addEventListener('change', (e) => map.setDebug(e.target.checked));
 
     window.map = map;
   </script>
