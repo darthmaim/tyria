@@ -47,11 +47,9 @@ export class Tyria {
     });
     this.canvas.addEventListener('wheel', (e) => {
       if(e.deltaY > 0) {
-        this.zoom--;
-        this.render();
+        this.zoomOut();
       } else if(e.deltaY < 0) {
-        this.zoom++;
-        this.render();
+        this.zoomIn();
       }
     });
 
@@ -113,6 +111,7 @@ export class Tyria {
       },
       project: this.project.bind(this),
       unproject: this.unproject.bind(this),
+      registerPromise: (promise) => promise.then(() => this.render()),
     }
 
     // fill with background

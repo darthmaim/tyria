@@ -21,4 +21,5 @@ export interface LayerRenderContext {
   },
   project: (coordinate: Coordinate) => Coordinate,
   unproject: (point: Coordinate) => Coordinate,
+  registerPromise: (promise: Promise<any>) => void,
 }
