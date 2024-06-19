@@ -11,7 +11,9 @@
     import { Tyria, TileLayer } from '/dist/index.mjs';
 
     const map = new Tyria(document.getElementById('map'), {
-      backgroundColor: '#444'
+      backgroundColor: '#444',
+      maxZoom: 7,
+      minZoom: 1,
     });
 
     map.addLayer(new TileLayer({
