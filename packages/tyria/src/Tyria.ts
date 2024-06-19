@@ -48,9 +48,9 @@ export class Tyria {
     });
     this.canvas.addEventListener('wheel', (e) => {
       if(e.deltaY > 0) {
-        this.zoomOut();
+        this.zoomOut(.5);
       } else if(e.deltaY < 0) {
-        this.zoomIn();
+        this.zoomIn(.25);
       }
     });
 
@@ -197,10 +197,10 @@ export class Tyria {
     }
 
     // make sure the center is on full pixels
-    const centerCoordinates = this.project(this.center);
-    centerCoordinates[0] = Math.round(centerCoordinates[0]);
-    centerCoordinates[1] = Math.round(centerCoordinates[1]);
-    this.center = this.unproject(centerCoordinates);
+    // const centerCoordinates = this.project(this.center);
+    // centerCoordinates[0] = Math.round(centerCoordinates[0]);
+    // centerCoordinates[1] = Math.round(centerCoordinates[1]);
+    // this.center = this.unproject(centerCoordinates);
 
     // queue render
     this.queueRender();

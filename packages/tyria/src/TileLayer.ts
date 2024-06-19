@@ -15,7 +15,9 @@ export class TileLayer implements Layer {
   constructor(private options: TileLayerOptions) {}
 
   render({ context, state, project, registerPromise }: LayerRenderContext) {
+    const zoom = Math.ceil(state.zoom);
     const tileSize = this.options.tileSize ?? 256;
+    const renderedTileSize = tileSize * (2 ** (state.zoom % 1));
 
     const center = project(state.center);
     const boundsTopLeft = project(this.options.bounds?.[0] ?? [0, 0]);
@@ -27,18 +29,18 @@ export class TileLayer implements Layer {
     const bottomRightX = Math.min(-center[0] + state.width / 2, -boundsBottomRight[0] - 1);
     const bottomRightY = Math.min(-center[1] + state.width / 2, -boundsBottomRight[1] - 1);
 
-    const tileTopLeft = [Math.floor(topLeftX / tileSize), Math.floor(topLeftY / tileSize)];
-    const tileBottomRight = [Math.floor(bottomRightX / tileSize), Math.floor(bottomRightY / tileSize)];
+    const tileTopLeft = [Math.floor(topLeftX / renderedTileSize), Math.floor(topLeftY / renderedTileSize)];
+    const tileBottomRight = [Math.floor(bottomRightX / renderedTileSize), Math.floor(bottomRightY / renderedTileSize)];
 
     for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
       for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
 
-        const tileCacheKey = `${x},${y},${state.zoom}` as const;
+        const tileCacheKey = `${x},${y},${zoom}` as const;
         const tile = this.tileCache[tileCacheKey];
 
         if(tile === undefined) {
           // load tile
-          const fetchPromise = fetch(this.options.source(x, y, state.zoom), { headers: { 'accept': 'image/*' } }).then((response) => {
+          const fetchPromise = fetch(this.options.source(x, y, zoom), { headers: { 'accept': 'image/*' } }).then((response) => {
             if(response.ok) {
               return response.clone()
                 .blob()
@@ -56,27 +58,31 @@ export class TileLayer implements Layer {
 
         if(tile?.state === 'done') {
           // draw tile
-          context.drawImage(tile.image, x * tileSize, y * tileSize, tileSize, tileSize);
+          context.drawImage(tile.image, Math.floor(x * renderedTileSize), Math.floor(y * renderedTileSize), Math.ceil(renderedTileSize), Math.ceil(renderedTileSize));
         } else if(tile?.state === 'error') {
           // tile loading errored...
           context.beginPath();
-          context.rect(x * tileSize, y * tileSize, tileSize, tileSize);
-          context.moveTo(x * tileSize, y * tileSize);
-          context.lineTo(x * tileSize + tileSize - 1, y * tileSize + tileSize - 1);
+          context.rect(x * renderedTileSize, y * renderedTileSize, renderedTileSize, renderedTileSize);
+          context.moveTo(x * renderedTileSize, y * renderedTileSize);
+          context.lineTo(x * renderedTileSize + renderedTileSize - 1, y * renderedTileSize + renderedTileSize - 1);
           context.strokeStyle = 'red';
           context.lineWidth = 1;
           context.stroke();
         } else {
           // render fallback
-          const fallback = this.getFallbackTile(x, y, state.zoom);
+          const fallback = this.getFallbackTile(x, y, zoom);
 
           if(fallback) {
-            context.drawImage(fallback.image, fallback.x * tileSize, fallback.y * tileSize, fallback.scale * tileSize, fallback.scale * tileSize, x * tileSize, y * tileSize, tileSize, tileSize);
+            context.drawImage(
+              fallback.image,
+              fallback.x * tileSize, fallback.y * tileSize, fallback.scale * tileSize, fallback.scale * tileSize,
+              Math.floor(x * renderedTileSize), Math.floor(y * renderedTileSize), Math.ceil(renderedTileSize), Math.ceil(renderedTileSize)
+            );
           }
         }
 
         if(state.debug) {
-          this.renderDebugGrid(context, x, y, state.zoom, tileSize, tileSize);
+          this.renderDebugGrid(context, x, y, zoom, renderedTileSize, renderedTileSize);
         }
       }
     }
