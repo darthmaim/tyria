@@ -16,8 +16,12 @@ export interface LayerRenderContext {
 
     /** width of the map in px */
     width: number,
+
     /** height of the map in px */
     height: number,
+
+    /** debug overlays enabled */
+    debug: boolean,
   },
   project: (coordinate: Coordinate) => Coordinate,
   unproject: (point: Coordinate) => Coordinate,

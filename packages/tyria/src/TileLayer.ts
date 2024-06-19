@@ -75,7 +75,9 @@ export class TileLayer implements Layer {
           }
         }
 
-        this.renderDebugGrid(context, x, y, state.zoom, tileSize, tileSize);
+        if(state.debug) {
+          this.renderDebugGrid(context, x, y, state.zoom, tileSize, tileSize);
+        }
       }
     }
   }

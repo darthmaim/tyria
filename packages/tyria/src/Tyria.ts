@@ -8,6 +8,7 @@ export class Tyria {
   zoom = 1;
   center: Coordinate = [0, 0];
   layers: Layer[] = [];
+  debug = false;
 
   constructor(private container: HTMLElement, public readonly options: TyriaMapOptions) {
     this.createCanvas(this.container);
@@ -136,6 +137,7 @@ export class Tyria {
         zoom: this.zoom,
         width,
         height,
+        debug: this.debug,
       },
       project: this.project.bind(this),
       unproject: this.unproject.bind(this),
@@ -150,27 +152,30 @@ export class Tyria {
     for(const layer of this.layers) {
       ctx.setTransform(transform);
       layer.render(renderContext);
+      ctx.resetTransform();
     }
 
-    ctx.setTransform(transform);
 
-    // render bounds
-    const bounds = this.project([81920, 114688])
-    ctx.strokeStyle = 'lime';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(0, 0, -bounds[0], -bounds[1]);
+    if(this.debug) {
+      // render bounds
+      ctx.setTransform(transform);
+      const bounds = this.project([81920, 114688])
+      ctx.strokeStyle = 'lime';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, -bounds[0], -bounds[1]);
+      ctx.resetTransform();
 
-    ctx.resetTransform();
-
-    ctx.fillStyle = 'lime';
-    ctx.fillRect(width / 2 - 4, height / 2 - 4, 8, 8);
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = '#fff';
-    ctx.fillText(`${this.project(this.center)[0]}, ${this.project(this.center)[1]} px`, width / 2 + 8, height / 2);
-    ctx.fillText(`${this.center[0]}, ${this.center[1]} coord`, width / 2 + 8, height / 2 + 16);
-    ctx.fillText(`zoom ${this.zoom}`, width / 2 + 8, height / 2 + 32);
+      // render map center
+      ctx.fillStyle = 'lime';
+      ctx.fillRect(width / 2 - 4, height / 2 - 4, 8, 8);
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(`${this.project(this.center)[0]}, ${this.project(this.center)[1]} px`, width / 2 + 8, height / 2);
+      ctx.fillText(`${this.center[0]}, ${this.center[1]} coord`, width / 2 + 8, height / 2 + 16);
+      ctx.fillText(`zoom ${this.zoom}`, width / 2 + 8, height / 2 + 32);
+    }
   }
 
   addLayer(layer: Layer) {
@@ -185,6 +190,11 @@ export class Tyria {
 
   zoomOut(delta = 1) {
     this.zoom = this.options.minZoom ? Math.max(this.options.minZoom, this.zoom - delta) : this.zoom - delta;
+    this.queueRender();
+  }
+
+  setDebug(debug: boolean) {
+    this.debug = debug;
     this.queueRender();
   }
 }
