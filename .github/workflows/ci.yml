@@ -28,6 +28,7 @@ jobs:
         path: /tmp/github-pages/
 
   deploy-gh-pages:
+    if: github.event_name == 'push'
     needs: build
     permissions:
       pages: write
