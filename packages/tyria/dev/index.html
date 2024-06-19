@@ -7,10 +7,13 @@
 </head>
 <body>
   <div id="map" style="height: 800px;"></div>
-  <label>
-    <input type="checkbox" id="debug"/>
-    debug overlays
-  </label>
+  <div style="display: flex; gap: 32px; padding: 8px">
+    <label>
+      <input type="checkbox" id="debug"/>
+      debug overlays
+    </label>
+    <button id="animate">animate zoom</button>
+  </div>
   <script type="module">
     import { Tyria, TileLayer } from './dist/index.mjs';
 
@@ -26,6 +29,30 @@
     }));
 
     document.getElementById('debug').addEventListener('change', (e) => map.setDebug(e.target.checked));
+
+    document.getElementById('animate').addEventListener('click', () => {
+      document.getElementById('animate').disabled = true;
+      const start = performance.now();
+      const duration = 5000;
+
+      const tick = () => {
+        const now = performance.now();
+
+        const progress = (now - start) / duration;
+
+        map.zoom = 1 + progress * 5;
+        map.render();
+
+        if(now < start + duration) {
+          requestAnimationFrame(tick);
+        } else {
+          map.zoom = 6;
+          document.getElementById('animate').disabled = false;
+        }
+      };
+
+      requestAnimationFrame(tick);
+    })
 
     window.map = map;
   </script>

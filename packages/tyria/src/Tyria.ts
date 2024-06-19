@@ -50,7 +50,7 @@ export class Tyria {
       if(e.deltaY > 0) {
         this.zoomOut(.5);
       } else if(e.deltaY < 0) {
-        this.zoomIn(.25);
+        this.zoomIn(0.5);
       }
     });
 
