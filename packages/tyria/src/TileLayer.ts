@@ -16,7 +16,7 @@ export class TileLayer implements Layer {
 
   constructor(private options: TileLayerOptions) {
     this.frameBuffer = document.createElement('canvas');
-    this.frameBuffer.style.width = '256px';
+    this.frameBuffer.setAttribute('style', 'width: 256px; position: fixed; top: 16px; right: 16px; border: 4px solid #fff; box-shadow: 0 0 4px rgba(0 0 0 / .4)')
     document.body.append(this.frameBuffer);
   }
 
