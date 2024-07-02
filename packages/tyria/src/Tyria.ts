@@ -72,16 +72,16 @@ export class Tyria {
 
   /** projects geographical coordinates to pixels */
   project([x, y]: Coordinate): Coordinate {
-    // 0,0 -> 0,0
-    // 81920, 114688 -> 640, -896
+    // TODO: 128 (2^7) is currently hardcoded to match the maxZoom of the gw2 map, which also is the level at which coordinate = px
+    // this has to be configurable, and the assumption that there is a zoom level at which coordinates = px is probably also wrong for other maps
     const zoomFactor = 2 ** this.zoom;
     return [-x / 128 * zoomFactor, -y / 128 * zoomFactor];
   }
 
   /** projects pixels to geographical coordinates */
   unproject([x, y]: Coordinate): Coordinate {
-    // 0,0 -> 0,0
-    // 640, -896 -> 81920, 114688
+    // TODO: 128 (2^7) is currently hardcoded to match the maxZoom of the gw2 map, which also is the level at which coordinate = px
+    // this has to be configurable, and the assumption that there is a zoom level at which coordinates = px is probably also wrong for other maps
     const zoomFactor = 2 ** this.zoom;
     return [-x * 128 / zoomFactor, -y * 128 / zoomFactor];
   }
