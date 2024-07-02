@@ -1,6 +1,7 @@
 import { Layer, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
 import { Bounds, Coordinate } from './types';
+import { clamp } from './util';
 
 export class Tyria {
   canvas: HTMLCanvasElement;
@@ -46,12 +47,28 @@ export class Tyria {
         lastPoint = [e.clientX, e.clientY];
       }
     });
+
+    // zoom on wheel event
     this.canvas.addEventListener('wheel', (e) => {
-      if(e.deltaY > 0) {
-        this.zoomOut(.5);
-      } else if(e.deltaY < 0) {
-        this.zoomIn(0.5);
-      }
+      const delta = 0.5 * Math.sign(e.deltaY);
+
+      // get coordinates at cursor
+      this.setZoomAround(
+        this.canvasPixelToMap([e.offsetX, e.offsetY]),
+        this.zoom - delta
+      );
+    });
+
+    // log coordinates on click
+    this.canvas.addEventListener('click', (e) => {
+      // get coordinates at cursor
+      const halfWidth = this.canvas.width / 2;
+      const halfHeight = this.canvas.height / 2;
+
+      const offset: Coordinate = this.unproject([e.offsetX - halfWidth, e.offsetY - halfHeight]);
+      const clickAt: Coordinate = [this.center[0] - offset[0], this.center[1] - offset[1]];
+
+      console.log(clickAt);
     });
 
     window.addEventListener('resize', () => {
@@ -183,35 +200,67 @@ export class Tyria {
     this.queueRender();
   }
 
-  setZoom(zoom: number) {
-    this.zoom = zoom;
-
-    // ensure lower bound
-    if(this.options.minZoom) {
-      this.zoom = Math.max(this.options.minZoom, this.zoom);
+  setView(center?: Coordinate, zoom?: number) {
+    // handle center
+    // TODO: make sure the the viewport stays within the map bounds
+    if(center !== undefined) {
+      this.center = center;
     }
 
-    // ensure upper bound
-    if(this.options.maxZoom) {
-      this.zoom = Math.min(this.options.maxZoom, this.zoom);
+    // handle zoom
+    if(zoom !== undefined) {
+      this.zoom = clamp(zoom, this.options.minZoom, this.options.maxZoom);
     }
-
-    // make sure the center is on full pixels
-    // const centerCoordinates = this.project(this.center);
-    // centerCoordinates[0] = Math.round(centerCoordinates[0]);
-    // centerCoordinates[1] = Math.round(centerCoordinates[1]);
-    // this.center = this.unproject(centerCoordinates);
 
     // queue render
     this.queueRender();
   }
 
+  /** Set the zoom level */
+  setZoom(zoom: number) {
+    this.setView(undefined, zoom);
+  }
+
   zoomIn(delta = 1) {
-    this.setZoom(this.zoom + delta);
+    this.setView(undefined, this.zoom + delta);
   }
 
   zoomOut(delta = 1) {
-    this.setZoom(this.zoom - delta);
+    this.setView(undefined, this.zoom - delta);
+  }
+
+  canvasPixelToMap([x, y]: Coordinate) {
+    const halfWidth = this.canvas.width / 2;
+    const halfHeight = this.canvas.height / 2;
+
+    const offset: Coordinate = this.unproject([x - halfWidth, y - halfHeight]);
+    const point: Coordinate = [this.center[0] - offset[0], this.center[1] - offset[1]];
+
+    return point;
+  }
+
+  /** Set zoom and keep a specific point stationary */
+  setZoomAround(mapPoint: Coordinate, zoom: number) {
+    // make sure the new zoom value is within the zoom bounds
+    // `this.setView()` also checks this, but if we are not actually zooming because we are at the bounds already, we need to return early or else we will just move the center
+    zoom = clamp(zoom, this.options.minZoom, this.options.maxZoom);
+
+    // if the zoom does not change return
+    if(zoom === this.zoom) {
+      return;
+    }
+
+    // calculate the change in scale between the current zoom level and the target
+    const scale = 1 - 1 / ((2 ** zoom) / (2 ** this.zoom));
+
+    // calculate offset, apply scale and add to current center
+    const newCenter: Coordinate = [
+      (mapPoint[0] - this.center[0]) * scale + this.center[0],
+      (mapPoint[1] - this.center[1]) * scale + this.center[1],
+    ];
+
+    // set view to new center and zoom
+    this.setView(newCenter, zoom);
   }
 
   setDebug(debug: boolean) {
