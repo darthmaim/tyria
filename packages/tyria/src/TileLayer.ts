@@ -57,17 +57,34 @@ export class TileLayer implements Layer {
 
 
     // create buffer canvas to render
-    // const buffer = new OffscreenCanvas((tileBottomRight[0] - tileTopLeft[0]) * tileSize, (tileBottomRight[1] - tileTopLeft[1]) * tileSize);
     const buffer = this.frameBuffer;
-    buffer.width = (tileBottomRight[0] - tileTopLeft[0] + 1) * tileSize;
-    buffer.height = (tileBottomRight[1] - tileTopLeft[1] + 1) * tileSize;
-    buffer.style.aspectRatio = `${buffer.width} / ${buffer.height}`;
+
+    // calculate required buffer size
+    // TODO: make the buffer a little larger than required by the viewport so we preload tiles while panning
+    const bufferWidth = (tileBottomRight[0] - tileTopLeft[0] + 1) * tileSize;
+    const bufferHeight = (tileBottomRight[1] - tileTopLeft[1] + 1) * tileSize;
+
+    // only resize the buffer if we need to
+    if(buffer.width !== bufferWidth || buffer.height !== bufferHeight) {
+      buffer.width = bufferWidth;
+      buffer.height = bufferHeight;
+      buffer.style.aspectRatio = `${buffer.width} / ${buffer.height}`;
+    }
+
+    // get buffer context to draw to
     const bufferCtx = buffer.getContext('2d')!;
 
+    // TODO:
+    // if the zoom level did not change we can reuse the previous buffer
+    // by shifting the current content of the buffer to the new offset
+    // then we only need to render tiles that were not part of the buffer in the previous frame.
+    // even if the zoom level changes we could scale the previous buffer, or just keep a buffer per zoom level
 
+    // iterate through all tiles in the viewport
     for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
       for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
 
+        // try to get the tile from the cache
         const tileCacheKey = `${x},${y},${zoom}` as const;
         const tile = this.tileCache[tileCacheKey];
 
