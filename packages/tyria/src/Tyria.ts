@@ -168,7 +168,7 @@ export class Tyria {
       // render map center
       ctx.fillStyle = 'lime';
       ctx.fillRect(width / 2 - 4, height / 2 - 4, 8, 8);
-      ctx.font = '12px sans-serif';
+      ctx.font = '12px monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillStyle = '#fff';

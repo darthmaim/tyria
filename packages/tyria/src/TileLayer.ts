@@ -12,7 +12,13 @@ export interface TileLayerOptions {
 export class TileLayer implements Layer {
   private tileCache: Record<`${number},${number},${number}`, { state: 'loading' | 'error' } | { state: 'done', image: ImageBitmap } | undefined> = {}
 
-  constructor(private options: TileLayerOptions) {}
+  private frameBuffer: HTMLCanvasElement;
+
+  constructor(private options: TileLayerOptions) {
+    this.frameBuffer = document.createElement('canvas');
+    this.frameBuffer.style.width = '256px';
+    document.body.append(this.frameBuffer);
+  }
 
   render({ context, state, project, registerPromise }: LayerRenderContext) {
     // get the zoom level of tiles to use (prefer higher resolution)
@@ -27,21 +33,37 @@ export class TileLayer implements Layer {
     const renderedTileSize = state.zoom % 1 === 0 ? tileSize : 0.5 * (2 ** (state.zoom % 1)) * tileSize;
 
     if(renderedTileSize < tileSize / 2) {
+      // something is messed up, skip render to not use unnecessary performance
       return;
     }
 
     const center = project(state.center);
+
+    // get the bounds (px) in which we render
     const boundsTopLeft = project(this.options.bounds?.[0] ?? [0, 0]);
     const boundsBottomRight = project(this.options.bounds?.[1] ?? [0, 0]);
 
+    // get the top left position (px)
     const topLeftX = Math.max(-center[0] - state.width / 2, boundsTopLeft[0]);
     const topLeftY = Math.max(-center[1] - state.height / 2, boundsTopLeft[1]);
 
-    const bottomRightX = Math.min(-center[0] + state.width / 2, -boundsBottomRight[0] - 1);
-    const bottomRightY = Math.min(-center[1] + state.width / 2, -boundsBottomRight[1] - 1);
+    // get the top right position (px)
+    const bottomRightX = Math.min(-center[0] + state.width / 2, -boundsBottomRight[0]) - 1;
+    const bottomRightY = Math.min(-center[1] + state.height / 2, -boundsBottomRight[1]) - 1;
 
+    // convert px position to tiles
     const tileTopLeft = [Math.floor(topLeftX / renderedTileSize), Math.floor(topLeftY / renderedTileSize)];
     const tileBottomRight = [Math.floor(bottomRightX / renderedTileSize), Math.floor(bottomRightY / renderedTileSize)];
+
+
+    // create buffer canvas to render
+    // const buffer = new OffscreenCanvas((tileBottomRight[0] - tileTopLeft[0]) * tileSize, (tileBottomRight[1] - tileTopLeft[1]) * tileSize);
+    const buffer = this.frameBuffer;
+    buffer.width = (tileBottomRight[0] - tileTopLeft[0] + 1) * tileSize;
+    buffer.height = (tileBottomRight[1] - tileTopLeft[1] + 1) * tileSize;
+    buffer.style.aspectRatio = `${buffer.width} / ${buffer.height}`;
+    const bufferCtx = buffer.getContext('2d')!;
+
 
     for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
       for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
@@ -69,7 +91,8 @@ export class TileLayer implements Layer {
 
         if(tile?.state === 'done') {
           // draw tile
-          context.drawImage(tile.image, Math.floor(x * renderedTileSize), Math.floor(y * renderedTileSize), Math.ceil(renderedTileSize), Math.ceil(renderedTileSize));
+          bufferCtx.drawImage(tile.image, (x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize);
+          bufferCtx.strokeStyle = 'orange';
         } else if(tile?.state === 'error') {
           // tile loading errored...
           context.beginPath();
@@ -84,18 +107,52 @@ export class TileLayer implements Layer {
           const fallback = this.getFallbackTile(x, y, zoom);
 
           if(fallback) {
-            context.drawImage(
+            bufferCtx.drawImage(
               fallback.image,
               fallback.x * tileSize, fallback.y * tileSize, fallback.scale * tileSize, fallback.scale * tileSize,
-              Math.floor(x * renderedTileSize), Math.floor(y * renderedTileSize), Math.ceil(renderedTileSize), Math.ceil(renderedTileSize)
+              (x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize
             );
           }
         }
+      }
+    }
 
-        if(state.debug) {
+    // draw the buffer to the actual canvas
+    context.drawImage(
+      buffer,
+      tileTopLeft[0] * renderedTileSize,
+      tileTopLeft[1] * renderedTileSize,
+      (tileBottomRight[0] - tileTopLeft[0] + 1) * renderedTileSize,
+      (tileBottomRight[1] - tileTopLeft[1] + 1) * renderedTileSize);
+
+    if(state.debug) {
+      context.save();
+      for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
+        for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
           this.renderDebugGrid(context, x, y, zoom, renderedTileSize, renderedTileSize);
         }
       }
+      context.restore();
+
+      // visible box
+      context.strokeStyle = '#ffc107';
+      context.lineWidth = 2;
+      context.setLineDash([8, 8]);
+      context.strokeRect(topLeftX, topLeftY, bottomRightX - topLeftX + 1, bottomRightY - topLeftY + 1);
+      context.setLineDash([]);
+
+      // tile size
+      context.font = 'bold 12px monospace';
+      context.fillStyle = '#fff';
+      context.fillText(`TileSize: ${tileSize} @ ${renderedTileSize}`, topLeftX + 8, topLeftY + 8);
+      context.fillText(`ViewBox: x ${topLeftX}`, topLeftX + 8, topLeftY + 8 + 16);
+      context.fillText(`         y ${topLeftY}`, topLeftX + 8, topLeftY + 8 + 32);
+      context.fillText(`         w ${bottomRightX - topLeftX + 1}`, topLeftX + 8, topLeftY + 8 + 48);
+      context.fillText(`         h ${bottomRightY - topLeftY + 1}`, topLeftX + 8, topLeftY + 8 + 64);
+
+      // center
+      context.fillStyle = 'pink';
+      context.fillRect(-center[0] - 4, -center[1] - 4, 8, 8);
     }
   }
 
@@ -118,11 +175,11 @@ export class TileLayer implements Layer {
   }
 
   renderDebugGrid(context: CanvasRenderingContext2D, x: number, y: number, zoom: number, width: number, height: number) {
-    const lineWidth = 4 / (window.devicePixelRatio || 1);
+    const lineWidth = 4;
 
     context.lineWidth = lineWidth;
     context.textAlign = 'center';
-    context.font = 'bold 16px sans-serif'
+    context.font = 'bold 16px monospace'
     context.strokeStyle = (x + y) % 2 === 0 ? '#f4433633' : '#2196f333';
     context.fillStyle = (x + y) % 2 === 0 ? '#f44336' : '#2196f3';
 
