@@ -30,6 +30,10 @@
 
     document.getElementById('debug').addEventListener('change', (e) => map.setDebug(e.target.checked));
 
+    var easing = function (t) {
+      return t * t * (3 - 2 * t);
+    };
+
     document.getElementById('animate').addEventListener('click', () => {
       document.getElementById('animate').disabled = true;
       const start = performance.now();
@@ -38,15 +42,14 @@
       const tick = () => {
         const now = performance.now();
 
-        const progress = (now - start) / duration;
+        const progress = Math.min(Math.max(0, (now - start) / duration), 1);
 
-        map.zoom = 1 + progress * 5;
+        map.zoom = 1 + easing(progress) * 5;
         map.render();
 
         if(now < start + duration) {
           requestAnimationFrame(tick);
         } else {
-          map.zoom = 6;
           document.getElementById('animate').disabled = false;
         }
       };
