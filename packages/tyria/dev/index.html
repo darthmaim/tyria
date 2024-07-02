@@ -22,6 +22,7 @@
       maxZoom: 7,
       minZoom: 1,
     });
+    map.center = [49432, 31440];
 
     map.addLayer(new TileLayer({
       source: (x, y, z) => `https://tiles.gw2.io/1/1/${z}/${x}/${y}.jpg`,
