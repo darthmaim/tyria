@@ -143,6 +143,8 @@ export class TileLayer implements Layer {
       (tileBottomRight[1] - tileTopLeft[1] + 1) * renderedTileSize);
 
     if(state.debug) {
+      context.textBaseline = 'top';
+
       context.save();
       for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
         for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
