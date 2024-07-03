@@ -1,5 +1,5 @@
 import { Layer, LayerRenderContext } from "./layer";
-import { Bounds, Coordinate } from "./types";
+import { Bounds, Point } from "./types";
 
 export interface TileLayerOptions {
   source: (x: number, y: number, zoom: number) => string;

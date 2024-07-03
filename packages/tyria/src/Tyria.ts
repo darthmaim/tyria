@@ -1,13 +1,13 @@
 import { Layer, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
-import { Bounds, Coordinate } from './types';
+import { Bounds, Point } from './types';
 import { clamp } from './util';
 
 export class Tyria {
   canvas: HTMLCanvasElement;
 
   zoom = 1;
-  center: Coordinate = [0, 0];
+  center: Point = [0, 0];
   layers: Layer[] = [];
   debug = false;
 
@@ -29,7 +29,7 @@ export class Tyria {
     this.canvas.height = container.offsetHeight * dpr;
 
     let isDragging = false;
-    let lastPoint: Coordinate = [0, 0];
+    let lastPoint: Point = [0, 0];
     this.canvas.addEventListener('pointerdown', (e) => { isDragging = true; lastPoint = [e.clientX, e.clientY] });
     this.canvas.addEventListener('pointerup', () => isDragging = false)
     this.canvas.addEventListener('pointermove', (e) => {
@@ -65,8 +65,8 @@ export class Tyria {
       const halfWidth = this.canvas.width / 2;
       const halfHeight = this.canvas.height / 2;
 
-      const offset: Coordinate = this.unproject([e.offsetX - halfWidth, e.offsetY - halfHeight]);
-      const clickAt: Coordinate = [this.center[0] - offset[0], this.center[1] - offset[1]];
+      const offset: Point = this.unproject([e.offsetX - halfWidth, e.offsetY - halfHeight]);
+      const clickAt: Point = [this.center[0] - offset[0], this.center[1] - offset[1]];
 
       console.log(clickAt);
     });
@@ -88,7 +88,7 @@ export class Tyria {
   }
 
   /** projects geographical coordinates to pixels */
-  project([x, y]: Coordinate): Coordinate {
+  project([x, y]: Point): Point {
     // TODO: 128 (2^7) is currently hardcoded to match the maxZoom of the gw2 map, which also is the level at which coordinate = px
     // this has to be configurable, and the assumption that there is a zoom level at which coordinates = px is probably also wrong for other maps
     const zoomFactor = 2 ** this.zoom;
@@ -96,7 +96,7 @@ export class Tyria {
   }
 
   /** projects pixels to geographical coordinates */
-  unproject([x, y]: Coordinate): Coordinate {
+  unproject([x, y]: Point): Point {
     // TODO: 128 (2^7) is currently hardcoded to match the maxZoom of the gw2 map, which also is the level at which coordinate = px
     // this has to be configurable, and the assumption that there is a zoom level at which coordinates = px is probably also wrong for other maps
     const zoomFactor = 2 ** this.zoom;
@@ -200,7 +200,7 @@ export class Tyria {
     this.queueRender();
   }
 
-  setView(center?: Coordinate, zoom?: number) {
+  setView(center?: Point, zoom?: number) {
     // handle center
     // TODO: make sure the the viewport stays within the map bounds
     if(center !== undefined) {
@@ -229,18 +229,18 @@ export class Tyria {
     this.setView(undefined, this.zoom - delta);
   }
 
-  canvasPixelToMap([x, y]: Coordinate) {
+  canvasPixelToMap([x, y]: Point) {
     const halfWidth = this.canvas.width / 2;
     const halfHeight = this.canvas.height / 2;
 
-    const offset: Coordinate = this.unproject([x - halfWidth, y - halfHeight]);
-    const point: Coordinate = [this.center[0] - offset[0], this.center[1] - offset[1]];
+    const offset: Point = this.unproject([x - halfWidth, y - halfHeight]);
+    const point: Point = [this.center[0] - offset[0], this.center[1] - offset[1]];
 
     return point;
   }
 
   /** Set zoom and keep a specific point stationary */
-  setZoomAround(mapPoint: Coordinate, zoom: number) {
+  setZoomAround(mapPoint: Point, zoom: number) {
     // make sure the new zoom value is within the zoom bounds
     // `this.setView()` also checks this, but if we are not actually zooming because we are at the bounds already, we need to return early or else we will just move the center
     zoom = clamp(zoom, this.options.minZoom, this.options.maxZoom);
@@ -254,7 +254,7 @@ export class Tyria {
     const scale = 1 - 2 ** (this.zoom - zoom);
 
     // calculate offset, apply scale and add to current center
-    const newCenter: Coordinate = [
+    const newCenter: Point = [
       (mapPoint[0] - this.center[0]) * scale + this.center[0],
       (mapPoint[1] - this.center[1]) * scale + this.center[1],
     ];

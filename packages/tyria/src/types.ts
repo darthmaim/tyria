@@ -1,2 +1,2 @@
-export type Coordinate = [x: number, y: number];
-export type Bounds = [topLeft: Coordinate, bottomRight: Coordinate];
+export type Point = [x: number, y: number];
+export type Bounds = [topLeft: Point, bottomRight: Point];

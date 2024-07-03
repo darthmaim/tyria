@@ -1,5 +1,5 @@
 import { Tyria } from "./Tyria";
-import { Bounds, Coordinate } from "./types";
+import { Bounds, Point } from "./types";
 
 export interface Layer {
   render(context: LayerRenderContext)
@@ -9,7 +9,7 @@ export interface LayerRenderContext {
   context: CanvasRenderingContext2D,
   state: {
     /** center of the map in map coordinates */
-    center: Coordinate,
+    center: Point,
 
     /** zoom factor */
     zoom: number,
@@ -23,7 +23,7 @@ export interface LayerRenderContext {
     /** debug overlays enabled */
     debug: boolean,
   },
-  project: (coordinate: Coordinate) => Coordinate,
-  unproject: (point: Coordinate) => Coordinate,
+  project: (coordinate: Point) => Point,
+  unproject: (point: Point) => Point,
   registerPromise: (promise: Promise<any>) => void,
 }
