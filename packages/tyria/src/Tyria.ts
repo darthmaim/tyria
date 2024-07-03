@@ -251,7 +251,7 @@ export class Tyria {
     }
 
     // calculate the change in scale between the current zoom level and the target
-    const scale = 1 - 1 / ((2 ** zoom) / (2 ** this.zoom));
+    const scale = 1 - 2 ** (this.zoom - zoom);
 
     // calculate offset, apply scale and add to current center
     const newCenter: Coordinate = [
