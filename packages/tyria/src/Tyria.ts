@@ -51,10 +51,11 @@ export class Tyria {
     // zoom on wheel event
     this.canvas.addEventListener('wheel', (e) => {
       const delta = 0.5 * Math.sign(e.deltaY);
+      const dpr = window.devicePixelRatio || 1;
 
       // get coordinates at cursor
       this.setZoomAround(
-        this.canvasPixelToMap([e.offsetX, e.offsetY]),
+        this.canvasPixelToMap([e.offsetX * dpr, e.offsetY * dpr]),
         this.zoom - delta
       );
     });
