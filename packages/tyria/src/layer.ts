@@ -20,6 +20,9 @@ export interface LayerRenderContext {
     /** height of the map in px */
     height: number,
 
+    /** The device pixel ratio used to render */
+    dpr: number,
+
     /** debug overlays enabled */
     debug: boolean,
   },

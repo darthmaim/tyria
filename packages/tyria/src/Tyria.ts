@@ -37,8 +37,7 @@ export class Tyria {
         const deltaX = e.clientX - lastPoint[0];
         const deltaY = e.clientY - lastPoint[1];
 
-        const dpr = window.devicePixelRatio || 1;
-        const delta = this.unproject([deltaX * dpr, deltaY * dpr]);
+        const delta = this.unproject([deltaX, deltaY]);
 
         this.center[0] += delta[0];
         this.center[1] += delta[1];
@@ -51,11 +50,10 @@ export class Tyria {
     // zoom on wheel event
     this.canvas.addEventListener('wheel', (e) => {
       const delta = 0.5 * Math.sign(e.deltaY);
-      const dpr = window.devicePixelRatio || 1;
 
       // get coordinates at cursor
       this.setZoomAround(
-        this.canvasPixelToMap([e.offsetX * dpr, e.offsetY * dpr]),
+        this.canvasPixelToMap([e.offsetX, e.offsetY]),
         this.zoom - delta
       );
     });
@@ -139,13 +137,14 @@ export class Tyria {
       throw new Error('Could not get canvas context');
     }
 
-    const width = this.canvas.width;
-    const height = this.canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const width = this.canvas.width / dpr;
+    const height = this.canvas.height / dpr;
     const translate = this.project(this.center);
     const translateX = translate[0] + (width / 2);
     const translateY = translate[1] + (height / 2);
 
-    const transform = new DOMMatrix([1, 0, 0, 1, translateX, translateY]);
+    const transform = new DOMMatrix([dpr, 0, 0, dpr, translateX * dpr, translateY * dpr]);
 
     // render layers
     const renderContext: LayerRenderContext = {
@@ -155,6 +154,7 @@ export class Tyria {
         zoom: this.zoom,
         width,
         height,
+        dpr,
         debug: this.debug,
       },
       project: this.project.bind(this),
@@ -164,7 +164,7 @@ export class Tyria {
 
     // fill with background
     ctx.fillStyle = this.options.backgroundColor ?? 'lime';
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, width * dpr, height * dpr);
 
     // render layers
     for(const layer of this.layers) {
@@ -184,16 +184,20 @@ export class Tyria {
       ctx.resetTransform();
 
       // render map center
+      ctx.setTransform(dpr, 0, 0, dpr, dpr * width / 2, dpr * height / 2);
       ctx.fillStyle = 'lime';
-      ctx.fillRect(width / 2 - 4, height / 2 - 4, 8, 8);
+      ctx.fillRect(-4, -4, 8, 8);
       ctx.font = '12px monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillStyle = '#fff';
-      ctx.fillText(`${this.project(this.center)[0]}, ${this.project(this.center)[1]} px`, width / 2 + 8, height / 2);
-      ctx.fillText(`${this.center[0]}, ${this.center[1]} coord`, width / 2 + 8, height / 2 + 16);
-      ctx.fillText(`zoom ${this.zoom}`, width / 2 + 8, height / 2 + 32);
+      ctx.fillText(`${this.project(this.center)[0]}, ${this.project(this.center)[1]} px`, 8, 0);
+      ctx.fillText(`${this.center[0]}, ${this.center[1]} coord`, 8, 16);
+      ctx.fillText(`zoom ${this.zoom}`, 8, 32);
     }
+
+    // make sure there are no transforms set
+    ctx.resetTransform();
   }
 
   addLayer(layer: Layer) {
@@ -231,8 +235,10 @@ export class Tyria {
   }
 
   canvasPixelToMap([x, y]: Point) {
-    const halfWidth = this.canvas.width / 2;
-    const halfHeight = this.canvas.height / 2;
+    const dpr = window.devicePixelRatio || 1;
+
+    const halfWidth = this.canvas.width / dpr / 2;
+    const halfHeight = this.canvas.height / dpr / 2;
 
     const offset: Point = this.unproject([x - halfWidth, y - halfHeight]);
     const point: Point = [this.center[0] - offset[0], this.center[1] - offset[1]];
