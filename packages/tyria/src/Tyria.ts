@@ -272,8 +272,10 @@ export class Tyria {
       const easedProgress = easing(progress);
 
       // calculate zoom
-      const deltaZoom = (targetZoom - startZoom) * easedProgress;
-      const newZoom = startZoom + deltaZoom;
+      const deltaZoom = (targetZoom - startZoom);
+      const s = (x) => ((1 / (2 ** deltaZoom)) - 1) * x + 1;
+      const z = (x) => Math.log2(1 / s(x));
+      const newZoom = z(easedProgress) + startZoom;
 
       // when animating both the zoom and the center it appears to get faster when zooming in (and slower when zooming out)
       // to compensate this we need need to calculate a speedup factor based on the deltaZoom
@@ -287,7 +289,8 @@ export class Tyria {
       ];
 
       // set view to the calculated center and zoom
-      this.setView(newCenter, newZoom);
+      this.center = newCenter;
+      this.zoom = newZoom;
 
       // we are in an animationFrame already, so we can just immediately render (setView only queued a render next frame)
       this.render();
