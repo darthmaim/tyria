@@ -12,7 +12,9 @@
       <input type="checkbox" id="debug"/>
       debug overlays
     </label>
-    <button id="animate">animate zoom</button>
+    <button id="lionsarch">Lion's Arch</button>
+    <button id="ascalon">Ascalon</button>
+    <button id="horn">Horn of Maguuma</button>
   </div>
   <script type="module">
     import { Tyria, TileLayer } from './dist/index.mjs';
@@ -31,32 +33,9 @@
 
     document.getElementById('debug').addEventListener('change', (e) => map.setDebug(e.target.checked));
 
-    var easing = function (t) {
-      return t * t * (3 - 2 * t);
-    };
-
-    document.getElementById('animate').addEventListener('click', () => {
-      document.getElementById('animate').disabled = true;
-      const start = performance.now();
-      const duration = 5000;
-
-      const tick = () => {
-        const now = performance.now();
-
-        const progress = Math.min(Math.max(0, (now - start) / duration), 1);
-
-        map.zoom = 1 + easing(progress) * 5;
-        map.render();
-
-        if(now < start + duration) {
-          requestAnimationFrame(tick);
-        } else {
-          document.getElementById('animate').disabled = false;
-        }
-      };
-
-      requestAnimationFrame(tick);
-    })
+    document.getElementById('lionsarch').addEventListener('click', () => map.easeView([49500, 31500], 6, {}))
+    document.getElementById('ascalon').addEventListener('click', () => map.easeView([61495, 30150], 3.5, {}))
+    document.getElementById('horn').addEventListener('click', () => map.easeView([23507, 22185], 4, {}))
 
     window.map = map;
   </script>

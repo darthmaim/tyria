@@ -1,7 +1,7 @@
 import { Layer, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
 import { Bounds, Point } from './types';
-import { clamp } from './util';
+import { clamp, easeInOutCubic } from './util';
 
 export class Tyria {
   canvas: HTMLCanvasElement;
@@ -219,6 +219,88 @@ export class Tyria {
 
     // queue render
     this.queueRender();
+  }
+
+  // hold the current easing
+  currentEase: { frame: (progress: number) => void, start: number, duration: number } | undefined;
+
+  // tick function
+  easeTick = () => {
+    // if there is no current animation, return
+    if(!this.currentEase) {
+      return;
+    }
+
+    // get currently running transition
+    const { frame, start, duration } = this.currentEase;
+
+    // get the current timestamp to calculate progress
+    const now = performance.now();
+    const progress = Math.min((now - start) / duration, 1);
+
+    // call the frame function with the current progress
+    frame(progress);
+
+    // if the animation is not yet finished, queue another frame,
+    // otherwise unset the current one
+    if(progress < 1) {
+      requestAnimationFrame(this.easeTick)
+    } else {
+      this.currentEase = undefined;
+    }
+  }
+
+  easeView(center?: Point, zoom?: number, options?: { duration?: number, easing: (progress: number) => number }) {
+    // get options
+    const {
+      duration = 1000,
+      easing = (x) => x,
+    } = options ?? {};
+
+    // get the current center/zoom and store as start values
+    const startCenter = this.center;
+    const startZoom = this.zoom;
+
+    // get the target values (default to current if unset)
+    const targetCenter = center ?? startCenter;
+    const targetZoom = zoom ?? startZoom;
+
+    // frame function gets passed a progress (0,1] and
+    // calculates the new center/zoom at that progress between start and target
+    const frame = (progress: number) => {
+      // progress is linear, but we want a smooth animation, so apply easing
+      const easedProgress = easing(progress);
+
+      // calculate zoom
+      const deltaZoom = (targetZoom - startZoom) * easedProgress;
+      const newZoom = startZoom + deltaZoom;
+
+      // when animating both the zoom and the center it appears to get faster when zooming in (and slower when zooming out)
+      // to compensate this we need need to calculate a speedup factor based on the deltaZoom
+      // TODO: find correct equation (needs to be always 1 at 100%, before that it needs to be >1 when zooming in (faster at start (because we are zoomed out further and translation appears slower)) and <1 when zooming out)
+      const speedup = 1;
+
+      // calculate center
+      const newCenter: Point = [
+        startCenter[0] + (targetCenter[0] - startCenter[0]) * easedProgress * speedup,
+        startCenter[1] + (targetCenter[1] - startCenter[1]) * easedProgress * speedup
+      ];
+
+      // set view to the calculated center and zoom
+      this.setView(newCenter, newZoom);
+
+      // we are in an animationFrame already, so we can just immediately render (setView only queued a render next frame)
+      this.render();
+    }
+
+    if(duration === 0) {
+      // if the duration of the transition is 0 we just call the end frame
+      frame(1);
+    } else {
+      // store current ease and queue frame
+      this.currentEase = { frame, duration, start: performance.now() }
+      requestAnimationFrame(this.easeTick);
+    }
   }
 
   /** Set the zoom level */
