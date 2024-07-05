@@ -50,11 +50,13 @@ export class Tyria {
     this.canvas.addEventListener('wheel', (e) => {
       const delta = 0.5 * Math.sign(e.deltaY);
 
-      // get coordinates at cursor
-      this.setZoomAround(
-        this.canvasPixelToMap([e.offsetX, e.offsetY]),
-        this.view.zoom - delta
-      );
+      this.easeTo({
+        around: this.canvasPixelToMap([e.offsetX, e.offsetY]),
+        zoom: this.view.zoom - delta
+      }, {
+        duration: 100,
+        easing: (x) => Math.sin((x * Math.PI) / 2)
+      })
     });
 
     // log coordinates on click
@@ -243,13 +245,28 @@ export class Tyria {
   resolveView(view: ViewOptions): View {
     const current = this.view;
 
-    const center = view.center ?? current.center;
-    const zoom = clamp(view.zoom ?? current.zoom, this.options.minZoom, this.options.maxZoom);
+    // make sure the zoom stays between minZoom and maxZoom
+    const snapZoom = (z: number) => this.options.zoomSnap ? Math.round(z / this.options.zoomSnap) * this.options.zoomSnap : z;
+    const zoom = clamp(view.zoom ? snapZoom(view.zoom) : current.zoom, this.options.minZoom, this.options.maxZoom);
+
+    // set center
+    let center = view.center ?? current.center;
+
+    // if `around` is set we want to keep that point stationary while zooming
+    if(view.around && zoom !== current.zoom) {
+      // calculate the change in scale between the current zoom level and the target
+      const scale = 1 - 2 ** (this.view.zoom - zoom);
+
+      // calculate offset, apply scale and add to current center
+      const offset = subtract(view.around, this.view.center);
+      const scaledOffset = multiply(offset, scale);
+      center = add(this.view.center, scaledOffset);
+    }
 
     return { center, zoom };
   }
 
-  easeTo(view: ViewOptions, options?: { duration?: number, easing: (progress: number) => number }) {
+  easeTo(view: ViewOptions, options?: { duration?: number, easing?: (progress: number) => number }) {
     // get options
     const {
       duration = 1000,
@@ -263,8 +280,8 @@ export class Tyria {
     const deltaCenter = subtract(target.center, start.center);
 
     // functions to calculate the zoom
-    const s = (x) => ((1 / (2 ** deltaZoom)) - 1) * x + 1;
-    const z = (x) => Math.log2(1 / s(x));
+    const s = (x: number) => ((1 / (2 ** deltaZoom)) - 1) * x + 1;
+    const z = (x: number) => Math.log2(1 / s(x));
 
     // frame function gets passed a progress (0,1] and
     // calculates the new center/zoom at that progress between start and target
@@ -314,29 +331,6 @@ export class Tyria {
     const offset: Point = this.unproject([x - halfWidth, y - halfHeight]);
 
     return subtract(this.view.center, offset);
-  }
-
-  /** Set zoom and keep a specific point stationary */
-  setZoomAround(mapPoint: Point, zoom: number) {
-    // make sure the new zoom value is within the zoom bounds
-    // `this.setView()` also checks this, but if we are not actually zooming because we are at the bounds already, we need to return early or else we will just move the center
-    zoom = clamp(zoom, this.options.minZoom, this.options.maxZoom);
-
-    // if the zoom does not change return
-    if(zoom === this.view.zoom) {
-      return;
-    }
-
-    // calculate the change in scale between the current zoom level and the target
-    const scale = 1 - 2 ** (this.view.zoom - zoom);
-
-    // calculate offset, apply scale and add to current center
-    const offset = subtract(mapPoint, this.view.center);
-    const scaledOffset = multiply(offset, scale);
-    const center = add(this.view.center, scaledOffset);
-
-    // set view to new center and zoom
-    this.jumpTo({ center, zoom});
   }
 
   setDebug(debug: boolean) {

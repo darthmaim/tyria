@@ -9,4 +9,5 @@ export type View = {
 export type ViewOptions = {
   center?: Point;
   zoom?: number;
+  around?: Point;
 }
