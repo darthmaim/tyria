@@ -58,18 +58,18 @@ export class Tyria {
   }
 
   /** projects geographical coordinates to pixels */
-  project([x, y]: Point): Point {
+  project([x, y]: Point, zoom?: number): Point {
     // TODO: 128 (2^7) is currently hardcoded to match the maxZoom of the gw2 map, which also is the level at which coordinate = px
     // this has to be configurable, and the assumption that there is a zoom level at which coordinates = px is probably also wrong for other maps
-    const zoomFactor = 2 ** this.view.zoom;
+    const zoomFactor = 2 ** (zoom ?? this.view.zoom);
     return [-x / 128 * zoomFactor, -y / 128 * zoomFactor];
   }
 
   /** projects pixels to geographical coordinates */
-  unproject([x, y]: Point): Point {
+  unproject([x, y]: Point, zoom?: number): Point {
     // TODO: 128 (2^7) is currently hardcoded to match the maxZoom of the gw2 map, which also is the level at which coordinate = px
     // this has to be configurable, and the assumption that there is a zoom level at which coordinates = px is probably also wrong for other maps
-    const zoomFactor = 2 ** this.view.zoom;
+    const zoomFactor = 2 ** (zoom ?? this.view.zoom);
     return [-x * 128 / zoomFactor, -y * 128 / zoomFactor];
   }
 
@@ -218,6 +218,15 @@ export class Tyria {
       const offset = subtract(view.around, this.view.center);
       const scaledOffset = multiply(offset, scale);
       center = add(this.view.center, scaledOffset);
+    }
+
+    // make sure the center will not be between pixels
+    if(view.alignToPixels ?? true) {
+      const dpr = window.devicePixelRatio ?? 1;
+      const centerPx = this.project(center, zoom);
+      centerPx[0] = Math.round(centerPx[0] / dpr) * dpr;
+      centerPx[1] = Math.round(centerPx[1] / dpr) * dpr;
+      center = this.unproject(centerPx, zoom);
     }
 
     return { center, zoom };

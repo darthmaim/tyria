@@ -21,6 +21,7 @@ export class PanHandler extends Handler {
       this.map.canvas.style.cursor = 'grab';
 
       return {
+        view: { alignToPixels: true },
         applyInertia: true
       }
     }
@@ -44,6 +45,9 @@ export class PanHandler extends Handler {
     return {
       view: {
         center: add(this.map.view.center, delta),
+
+        // don't align to pixels during the pan
+        alignToPixels: false,
       }
     }
   }

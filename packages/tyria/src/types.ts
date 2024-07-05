@@ -10,4 +10,6 @@ export type ViewOptions = {
   center?: Point;
   zoom?: number;
   around?: Point;
+
+  alignToPixels?: boolean;
 }
