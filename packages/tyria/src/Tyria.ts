@@ -1,3 +1,4 @@
+import { HandlerManager } from './events/manager';
 import { Layer, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
 import { Point, View, ViewOptions } from './types';
@@ -6,19 +7,21 @@ import { add, clamp, easeInOutCubic, multiply, subtract } from './util';
 export class Tyria {
   canvas: HTMLCanvasElement;
 
-  view: View = {
+  view: Readonly<View> = {
     center: [0, 0],
     zoom: 1
   }
   layers: Layer[] = [];
-  debug = false;
+  debug = false
+
+  handlers: HandlerManager;
 
   constructor(private container: HTMLElement, public readonly options: TyriaMapOptions) {
     // create the canvas
     this.createCanvas();
 
     // setup event handlers
-    this.setupEvents();
+    this.handlers = new HandlerManager(this);
 
     // queue the first render
     this.queueRender();
@@ -27,6 +30,7 @@ export class Tyria {
   private createCanvas() {
     // create canvas
     this.canvas = document.createElement('canvas');
+    this.canvas.style.touchAction = 'none';
 
     // calculate its size
     this.calculateCanvasSize();
@@ -51,45 +55,6 @@ export class Tyria {
     this.canvas.height = this.container.offsetHeight * dpr;
 
     this.queueRender();
-  }
-
-  private setupEvents() {
-    // handle pan
-    let isDragging = false;
-    let lastPoint: Point = [0, 0];
-    this.canvas.addEventListener('pointerdown', (e) => { isDragging = true; lastPoint = [e.clientX, e.clientY] });
-    this.canvas.addEventListener('pointerup', () => isDragging = false)
-    this.canvas.addEventListener('pointermove', (e) => {
-      if(isDragging) {
-        const deltaX = e.clientX - lastPoint[0];
-        const deltaY = e.clientY - lastPoint[1];
-
-        const delta = this.unproject([deltaX, deltaY]);
-        this.jumpTo({ center: add(this.view.center, delta) });
-
-        lastPoint = [e.clientX, e.clientY];
-      }
-    });
-
-    // zoom on wheel event
-    this.canvas.addEventListener('wheel', (e) => {
-      const delta = 0.5 * Math.sign(e.deltaY);
-
-      this.easeTo({
-        around: this.canvasPixelToMap([e.offsetX, e.offsetY]),
-        zoom: this.view.zoom - delta
-      }, {
-        duration: 100,
-        easing: (x) => Math.sin((x * Math.PI) / 2)
-      })
-    });
-
-    // log coordinates on click
-    this.canvas.addEventListener('click', (e) => {
-      // get coordinates at cursor
-      const clickAt = this.canvasPixelToMap([e.offsetX, e.offsetY]);
-      console.log(clickAt);
-    });
   }
 
   /** projects geographical coordinates to pixels */
@@ -364,7 +329,7 @@ export class Tyria {
   }
 
   /** Convert a pixel in the canvas (for example offsetX/offsetY from an event) to the corresponding map coordinates at that point */
-  private canvasPixelToMap([x, y]: Point) {
+  canvasPixelToMap([x, y]: Point) {
     const dpr = window.devicePixelRatio || 1;
 
     const halfWidth = this.canvas.width / dpr / 2;
