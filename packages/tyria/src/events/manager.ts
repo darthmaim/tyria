@@ -1,5 +1,6 @@
 import { Tyria } from "../Tyria";
 import { Handler } from "./handler";
+import { Inertia } from "./inertia";
 import { PanHandler } from "./pan";
 import { ScrollZoomHandler } from "./scroll_zoom";
 
@@ -7,8 +8,11 @@ export type SupportedEvents = 'wheel' | 'pointerdown' | 'pointerup' | 'pointermo
 
 export class HandlerManager {
   private handlers: Map<string, Handler> = new Map();
+  private inertia: Inertia;
 
   constructor(private map: Tyria) {
+    this.inertia = new Inertia(map);
+
     // init default handlers
     this.addHandler('scrollZoom', new ScrollZoomHandler(map));
     this.addHandler('pan', new PanHandler(map));
@@ -30,7 +34,18 @@ export class HandlerManager {
 
         if(response !== undefined) {
           if(response.view) {
-            this.map.jumpTo(response.view)
+            // resolve the view
+            const view = this.map.resolveView(response.view);
+
+            // record to apply inertia later
+            this.inertia.record(view);
+
+            // apply view
+            this.map.jumpTo(view)
+          }
+
+          if(response.applyInertia) {
+            this.inertia.applyInertia();
           }
 
           return;

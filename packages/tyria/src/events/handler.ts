@@ -4,6 +4,7 @@ import { SupportedEvents } from "./manager";
 
 export interface HandledEvent {
   view?: ViewOptions
+  applyInertia?: boolean;
 }
 
 export type HandlerResponse = HandledEvent | undefined | void;

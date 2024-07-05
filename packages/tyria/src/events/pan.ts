@@ -6,13 +6,21 @@ export class PanHandler extends Handler {
   #isDragging = false;
   #lastPoint: Point = [0, 0];
 
-  pointerdown(event: PointerEvent) {
+  pointerdown(event: PointerEvent): HandlerResponse {
     this.#isDragging = true;
     this.#lastPoint = [event.clientX, event.clientY];
   }
 
-  pointerup(event: PointerEvent) {
+  pointerup(event: PointerEvent): HandlerResponse {
+    const wasDragging = this.#isDragging;
+
     this.#isDragging = false;
+
+    if(wasDragging) {
+      return {
+        applyInertia: true
+      }
+    }
   }
 
   pointermove(event: PointerEvent): HandlerResponse {
