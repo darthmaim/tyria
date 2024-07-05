@@ -4,10 +4,69 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tyria</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #051626;
+    }
+    #map {
+      position: absolute;
+      inset: 0;
+      animation: fadeIn 2s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+    }
+    .controls {
+      position: absolute;
+      top: calc(50% - 48px);
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      background-color: #fff;
+      border-radius: 2px;
+      box-shadow: 0 0 4px rgb(0 0 0 / .5);
+      overflow: hidden;
+    }
+    .controls > button {
+      width: 48px;
+      height: 48px;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .controls > button + button {
+      border-top: 1px solid #eee;
+    }
+    .controls > button:hover {
+      background-color: #eee;
+    }
+    .toolbar {
+      position: absolute;
+      bottom: 16px;
+      background: #fff;
+      margin-left: 50%;
+      margin-right: -50%;
+      transform: translateX(-50%);
+      padding: 16px;
+      border-radius: 2px;
+      box-shadow: 0 0 4px rgb(0 0 0 / .5);
+      display: flex;
+      gap: 16px;
+    }
+  </style>
 </head>
 <body>
-  <div id="map" style="height: calc(100vh - 54px);"></div>
-  <div style="display: flex; gap: 32px; padding: 8px">
+  <div id="map">
+    <div class="controls">
+      <button onclick="map.easeTo({ zoom: map.view.zoom + .5 }, { duration: 300 })">+</button>
+      <button onclick="map.easeTo({ zoom: map.view.zoom - .5 }, { duration: 300 })">-</button>
+    </div>
+  </div>
+  <div class="toolbar">
     <label>
       <input type="checkbox" id="debug"/>
       debug overlays
@@ -20,12 +79,13 @@
     import { Tyria, TileLayer } from './dist/index.mjs';
 
     const map = new Tyria(document.getElementById('map'), {
-      backgroundColor: '#444',
+      backgroundColor: '#051626',
       maxZoom: 7,
       minZoom: 1,
       zoomSnap: .5,
     });
-    map.jumpTo({ center: [49432, 31440] });
+    map.jumpTo({ center: [49432, 31440], zoom: 2.5 });
+    map.easeTo({ zoom: 3 }, { duration: 2000, easing: (x) => 1 - Math.pow(1 - x, 3) });
 
     map.addLayer(new TileLayer({
       source: (x, y, z) => `https://tiles.gw2.io/1/1/${z}/${x}/${y}.jpg`,

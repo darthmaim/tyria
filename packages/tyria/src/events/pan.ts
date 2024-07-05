@@ -9,6 +9,7 @@ export class PanHandler extends Handler {
   pointerdown(event: PointerEvent): HandlerResponse {
     this.#isDragging = true;
     this.#lastPoint = [event.clientX, event.clientY];
+    this.map.canvas.style.cursor = 'grabbing';
   }
 
   pointerup(event: PointerEvent): HandlerResponse {
@@ -17,6 +18,8 @@ export class PanHandler extends Handler {
     this.#isDragging = false;
 
     if(wasDragging) {
+      this.map.canvas.style.cursor = 'grab';
+
       return {
         applyInertia: true
       }

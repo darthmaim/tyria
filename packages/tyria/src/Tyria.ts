@@ -51,8 +51,8 @@ export class Tyria {
 
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
-    this.canvas.width = this.container.offsetWidth * dpr;
-    this.canvas.height = this.container.offsetHeight * dpr;
+    this.canvas.width = width * dpr;
+    this.canvas.height = height * dpr;
 
     this.queueRender();
   }
@@ -143,7 +143,7 @@ export class Tyria {
     }
 
     // fill the whole canvas with background
-    ctx.fillStyle = this.options.backgroundColor ?? 'lime';
+    ctx.fillStyle = this.options.backgroundColor ?? '#444444';
     ctx.fillRect(0, 0, width * dpr, height * dpr);
 
     // apply transform
