@@ -104,6 +104,7 @@ export class Tyria {
   }
 
   private _renderQueued: false | 'next-frame' | 'low-priority' = false;
+  private _renderQueueFrame: number;
   private _renderQueueTimeout: number;
   private queueRender(priority: 'next-frame' | 'low-priority' = 'next-frame') {
     // don't queue if it is already queued with same or higher priority
@@ -118,7 +119,7 @@ export class Tyria {
       }
 
       // request render in next animation frame
-      requestAnimationFrame(() => this.render());
+      this._renderQueueFrame = requestAnimationFrame(() => this.render());
     } else {
       // render in 80ms (5 frames at ~60fps), so we can collect some more queueRenders until then (for example from image loading promises resolving)
       this._renderQueueTimeout = setTimeout(() => this.render(), 80);
@@ -132,12 +133,20 @@ export class Tyria {
     // we are doing it, remove queue status
     this._renderQueued = false;
 
+    // and cancel pending renders
+    cancelAnimationFrame(this._renderQueueFrame);
+    clearTimeout(this._renderQueueTimeout);
+
+    // get context from canvas to draw to
     const ctx = this.canvas.getContext('2d');
 
     if(!ctx) {
       throw new Error('Could not get canvas context');
     }
 
+    // calculate the global transform of the map
+    // this scales the canvas to the correct dpr, so all subsequent drawing does not have to care about dpr
+    // and also translates the viewport to the center (so 0,0 is at the top left of the map)
     const dpr = window.devicePixelRatio || 1;
     const width = this.canvas.width / dpr;
     const height = this.canvas.height / dpr;
@@ -147,7 +156,7 @@ export class Tyria {
 
     const transform = new DOMMatrix([dpr, 0, 0, dpr, translateX * dpr, translateY * dpr]);
 
-    // render layers
+    // prepare context that is passed to layers
     const renderContext: LayerRenderContext = {
       context: ctx,
       state: {
@@ -163,19 +172,32 @@ export class Tyria {
       registerPromise: (promise) => promise.then(() => this.queueRender('low-priority')),
     }
 
-    // fill with background
+    // fill the whole canvas with background
     ctx.fillStyle = this.options.backgroundColor ?? 'lime';
     ctx.fillRect(0, 0, width * dpr, height * dpr);
 
+    // apply transform
+    ctx.setTransform(transform);
+
     // render layers
     for(const layer of this.layers) {
-      ctx.setTransform(transform);
+      // store the current state, so that we can reset it after the layer was rendered
+      ctx.save();
+
+      // actually render the layer
       layer.render(renderContext);
-      ctx.resetTransform();
+
+      // restore the context state so that nothing bleeds into the next draw calls
+      ctx.restore();
     }
 
+    // reset the transform after we are done rendering the layers
+    ctx.resetTransform();
 
+    // render debug information
     if(this.debug) {
+      ctx.save();
+
       // render bounds
       ctx.setTransform(transform);
       const bounds = this.project([81920, 114688])
@@ -195,53 +217,18 @@ export class Tyria {
       ctx.fillText(`${this.project(this.view.center)[0]}, ${this.project(this.view.center)[1]} px`, 8, 0);
       ctx.fillText(`${this.view.center[0]}, ${this.view.center[1]} coord`, 8, 16);
       ctx.fillText(`zoom ${this.view.zoom}`, 8, 32);
-    }
 
-    // make sure there are no transforms set
-    ctx.resetTransform();
+      ctx.restore();
+    }
   }
 
+  /** Add an additional layer to the map */
   addLayer(layer: Layer) {
     this.layers.push(layer);
     this.queueRender();
   }
 
-  jumpTo(view: ViewOptions) {
-    this.view = this.resolveView(view);
-
-    // queue render
-    this.queueRender();
-  }
-
-  // hold the current easing
-  currentEase: { frame: (progress: number) => void, start: number, duration: number } | undefined;
-
-  // tick function
-  easeTick = () => {
-    // if there is no current animation, return
-    if(!this.currentEase) {
-      return;
-    }
-
-    // get currently running transition
-    const { frame, start, duration } = this.currentEase;
-
-    // get the current timestamp to calculate progress
-    const now = performance.now();
-    const progress = Math.min((now - start) / duration, 1);
-
-    // call the frame function with the current progress
-    frame(progress);
-
-    // if the animation is not yet finished, queue another frame,
-    // otherwise unset the current one
-    if(progress < 1) {
-      requestAnimationFrame(this.easeTick)
-    } else {
-      this.currentEase = undefined;
-    }
-  }
-
+  /** Resolves the provided view to center + zoom */
   resolveView(view: ViewOptions): View {
     const current = this.view;
 
@@ -266,6 +253,13 @@ export class Tyria {
     return { center, zoom };
   }
 
+  /** Instantly jumps to the provided view */
+  jumpTo(view: ViewOptions) {
+    this.view = this.resolveView(view);
+    this.queueRender();
+  }
+
+  /** Transition to the  */
   easeTo(view: ViewOptions, options?: { duration?: number, easing?: (progress: number) => number }) {
     // get options
     const {
@@ -317,11 +311,41 @@ export class Tyria {
     }
   }
 
+  /** The currently running easing */
+  currentEase: { frame: (progress: number) => void, start: number, duration: number } | undefined;
+
+  /** Tick function called repeatedly while an easing is running */
+  easeTick = () => {
+    // if there is no current animation, return
+    if(!this.currentEase) {
+      return;
+    }
+
+    // get currently running transition
+    const { frame, start, duration } = this.currentEase;
+
+    // get the current timestamp to calculate progress
+    const now = performance.now();
+    const progress = Math.min((now - start) / duration, 1);
+
+    // call the frame function with the current progress
+    frame(progress);
+
+    // if the animation is not yet finished, queue another frame,
+    // otherwise unset the current one
+    if(progress < 1) {
+      requestAnimationFrame(this.easeTick)
+    } else {
+      this.currentEase = undefined;
+    }
+  }
+
   /** Set the zoom level */
   setZoom(zoom: number) {
     this.jumpTo({ zoom });
   }
 
+  /** Convert a pixel in the canvas (for example offsetX/offsetY from an event) to the corresponding map coordinates at that point */
   private canvasPixelToMap([x, y]: Point) {
     const dpr = window.devicePixelRatio || 1;
 
@@ -333,6 +357,7 @@ export class Tyria {
     return subtract(this.view.center, offset);
   }
 
+  /** Enable or disable the debug overlay of the map */
   setDebug(debug: boolean) {
     this.debug = debug;
     this.queueRender();
