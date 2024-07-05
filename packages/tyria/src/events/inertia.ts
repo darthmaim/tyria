@@ -1,5 +1,5 @@
 import { Tyria } from "../Tyria"
-import { Point, View } from "../types";
+import { View, ViewOptions } from "../types";
 import { add, clamp, easeOutCubic, multiply, subtract } from "../util";
 
 interface InertiaRecord {
@@ -50,28 +50,38 @@ export class Inertia {
     const end = this.buffer[this.buffer.length - 1];
 
     // calculate the duration passed between the records
-    const duration = end.time - start.time;
+    const eventDuration = end.time - start.time;
 
-    // calculate deltas between those 2 records
+    // create target view
+    const target: ViewOptions = {}
+    let easingDuration = 0;
+
+    // calculate zoom inertia
     const zoomDelta = end.view.zoom - start.view.zoom;
+    if(zoomDelta !== 0) {
+      const zoomEasing = calculateEasing(zoomDelta, eventDuration, { deceleration: 20 });
+
+      easingDuration = Math.max(easingDuration, zoomEasing.duration);
+      target.zoom = this.map.view.zoom + zoomEasing.amount;
+    }
+
+    // calculate center inertia
     const centerDeltaPx = this.map.project(subtract(end.view.center, start.view.center));
     const centerDeltaPxLength = Math.sqrt(centerDeltaPx[0] ** 2 + centerDeltaPx[1] ** 2);
+    if(centerDeltaPxLength !== 0) {
+      const centerEasing = calculateEasing(centerDeltaPxLength, eventDuration, { deceleration: 4000 });
 
-    // apply easing
-    const zoomEasing = calculateEasing(zoomDelta, duration, { deceleration: 20 });
-    const centerEasing = calculateEasing(centerDeltaPxLength, duration, { deceleration: 4000 });
-
-    // build target point based on the easing
-    const target = {
-      center: add(this.map.view.center, this.map.unproject(multiply(centerDeltaPx, centerEasing.amount / centerDeltaPxLength))),
-      zoom: this.map.view.zoom + zoomEasing.amount
-    };
+      easingDuration = Math.max(easingDuration, centerEasing.duration);
+      target.center = add(this.map.view.center, this.map.unproject(multiply(centerDeltaPx, centerEasing.amount / centerDeltaPxLength)));
+    }
 
     // start easing to the target
-    this.map.easeTo(target, {
-      duration: Math.max(zoomEasing.duration, centerEasing.duration),
-      easing: easeOutCubic
-    });
+    if(easingDuration !== 0) {
+      this.map.easeTo(target, {
+        duration: easingDuration,
+        easing: easeOutCubic
+      });
+    }
   }
 }
 
