@@ -1,13 +1,15 @@
 import { Layer, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
-import { Bounds, Point } from './types';
-import { clamp, easeInOutCubic } from './util';
+import { Point, View, ViewOptions } from './types';
+import { add, clamp, multiply, subtract } from './util';
 
 export class Tyria {
   canvas: HTMLCanvasElement;
 
-  zoom = 1;
-  center: Point = [0, 0];
+  view: View = {
+    center: [0, 0],
+    zoom: 1
+  }
   layers: Layer[] = [];
   debug = false;
 
@@ -38,10 +40,7 @@ export class Tyria {
         const deltaY = e.clientY - lastPoint[1];
 
         const delta = this.unproject([deltaX, deltaY]);
-
-        this.center[0] += delta[0];
-        this.center[1] += delta[1];
-        this.queueRender();
+        this.jumpTo({ center: add(this.view.center, delta) });
 
         lastPoint = [e.clientX, e.clientY];
       }
@@ -54,7 +53,7 @@ export class Tyria {
       // get coordinates at cursor
       this.setZoomAround(
         this.canvasPixelToMap([e.offsetX, e.offsetY]),
-        this.zoom - delta
+        this.view.zoom - delta
       );
     });
 
@@ -65,7 +64,7 @@ export class Tyria {
       const halfHeight = this.canvas.height / 2;
 
       const offset: Point = this.unproject([e.offsetX - halfWidth, e.offsetY - halfHeight]);
-      const clickAt: Point = [this.center[0] - offset[0], this.center[1] - offset[1]];
+      const clickAt = subtract(this.view.center, offset);
 
       console.log(clickAt);
     });
@@ -90,7 +89,7 @@ export class Tyria {
   project([x, y]: Point): Point {
     // TODO: 128 (2^7) is currently hardcoded to match the maxZoom of the gw2 map, which also is the level at which coordinate = px
     // this has to be configurable, and the assumption that there is a zoom level at which coordinates = px is probably also wrong for other maps
-    const zoomFactor = 2 ** this.zoom;
+    const zoomFactor = 2 ** this.view.zoom;
     return [-x / 128 * zoomFactor, -y / 128 * zoomFactor];
   }
 
@@ -98,7 +97,7 @@ export class Tyria {
   unproject([x, y]: Point): Point {
     // TODO: 128 (2^7) is currently hardcoded to match the maxZoom of the gw2 map, which also is the level at which coordinate = px
     // this has to be configurable, and the assumption that there is a zoom level at which coordinates = px is probably also wrong for other maps
-    const zoomFactor = 2 ** this.zoom;
+    const zoomFactor = 2 ** this.view.zoom;
     return [-x * 128 / zoomFactor, -y * 128 / zoomFactor];
   }
 
@@ -140,7 +139,7 @@ export class Tyria {
     const dpr = window.devicePixelRatio || 1;
     const width = this.canvas.width / dpr;
     const height = this.canvas.height / dpr;
-    const translate = this.project(this.center);
+    const translate = this.project(this.view.center);
     const translateX = translate[0] + (width / 2);
     const translateY = translate[1] + (height / 2);
 
@@ -150,8 +149,8 @@ export class Tyria {
     const renderContext: LayerRenderContext = {
       context: ctx,
       state: {
-        center: this.center,
-        zoom: this.zoom,
+        center: this.view.center,
+        zoom: this.view.zoom,
         width,
         height,
         dpr,
@@ -191,9 +190,9 @@ export class Tyria {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillStyle = '#fff';
-      ctx.fillText(`${this.project(this.center)[0]}, ${this.project(this.center)[1]} px`, 8, 0);
-      ctx.fillText(`${this.center[0]}, ${this.center[1]} coord`, 8, 16);
-      ctx.fillText(`zoom ${this.zoom}`, 8, 32);
+      ctx.fillText(`${this.project(this.view.center)[0]}, ${this.project(this.view.center)[1]} px`, 8, 0);
+      ctx.fillText(`${this.view.center[0]}, ${this.view.center[1]} coord`, 8, 16);
+      ctx.fillText(`zoom ${this.view.zoom}`, 8, 32);
     }
 
     // make sure there are no transforms set
@@ -205,17 +204,8 @@ export class Tyria {
     this.queueRender();
   }
 
-  setView(center?: Point, zoom?: number) {
-    // handle center
-    // TODO: make sure the the viewport stays within the map bounds
-    if(center !== undefined) {
-      this.center = center;
-    }
-
-    // handle zoom
-    if(zoom !== undefined) {
-      this.zoom = clamp(zoom, this.options.minZoom, this.options.maxZoom);
-    }
+  jumpTo(view: ViewOptions) {
+    this.view = this.resolveView(view);
 
     // queue render
     this.queueRender();
@@ -250,20 +240,31 @@ export class Tyria {
     }
   }
 
-  easeView(center?: Point, zoom?: number, options?: { duration?: number, easing: (progress: number) => number }) {
+  resolveView(view: ViewOptions): View {
+    const current = this.view;
+
+    const center = view.center ?? current.center;
+    const zoom = clamp(view.zoom ?? current.zoom, this.options.minZoom, this.options.maxZoom);
+
+    return { center, zoom };
+  }
+
+  easeTo(view: ViewOptions, options?: { duration?: number, easing: (progress: number) => number }) {
     // get options
     const {
       duration = 1000,
       easing = (x) => x,
     } = options ?? {};
 
-    // get the current center/zoom and store as start values
-    const startCenter = this.center;
-    const startZoom = this.zoom;
+    const start = this.view;
+    const target = this.resolveView(view);
 
-    // get the target values (default to current if unset)
-    const targetCenter = center ?? startCenter;
-    const targetZoom = zoom ?? startZoom;
+    const deltaZoom = target.zoom - start.zoom;
+    const deltaCenter = subtract(target.center, start.center);
+
+    // functions to calculate the zoom
+    const s = (x) => ((1 / (2 ** deltaZoom)) - 1) * x + 1;
+    const z = (x) => Math.log2(1 / s(x));
 
     // frame function gets passed a progress (0,1] and
     // calculates the new center/zoom at that progress between start and target
@@ -272,10 +273,7 @@ export class Tyria {
       const easedProgress = easing(progress);
 
       // calculate zoom
-      const deltaZoom = (targetZoom - startZoom);
-      const s = (x) => ((1 / (2 ** deltaZoom)) - 1) * x + 1;
-      const z = (x) => Math.log2(1 / s(x));
-      const newZoom = z(easedProgress) + startZoom;
+      const zoom = z(easedProgress) + start.zoom;
 
       // when animating both the zoom and the center it appears to get faster when zooming in (and slower when zooming out)
       // to compensate this we need need to calculate a speedup factor based on the deltaZoom
@@ -283,14 +281,10 @@ export class Tyria {
       const speedup = 1;
 
       // calculate center
-      const newCenter: Point = [
-        startCenter[0] + (targetCenter[0] - startCenter[0]) * easedProgress * speedup,
-        startCenter[1] + (targetCenter[1] - startCenter[1]) * easedProgress * speedup
-      ];
+      const center = add(start.center, multiply(deltaCenter, easedProgress * speedup));
 
       // set view to the calculated center and zoom
-      this.center = newCenter;
-      this.zoom = newZoom;
+      this.view = { center, zoom };
 
       // we are in an animationFrame already, so we can just immediately render (setView only queued a render next frame)
       this.render();
@@ -308,27 +302,18 @@ export class Tyria {
 
   /** Set the zoom level */
   setZoom(zoom: number) {
-    this.setView(undefined, zoom);
+    this.jumpTo({ zoom });
   }
 
-  zoomIn(delta = 1) {
-    this.setView(undefined, this.zoom + delta);
-  }
-
-  zoomOut(delta = 1) {
-    this.setView(undefined, this.zoom - delta);
-  }
-
-  canvasPixelToMap([x, y]: Point) {
+  private canvasPixelToMap([x, y]: Point) {
     const dpr = window.devicePixelRatio || 1;
 
     const halfWidth = this.canvas.width / dpr / 2;
     const halfHeight = this.canvas.height / dpr / 2;
 
     const offset: Point = this.unproject([x - halfWidth, y - halfHeight]);
-    const point: Point = [this.center[0] - offset[0], this.center[1] - offset[1]];
 
-    return point;
+    return subtract(this.view.center, offset);
   }
 
   /** Set zoom and keep a specific point stationary */
@@ -338,21 +323,20 @@ export class Tyria {
     zoom = clamp(zoom, this.options.minZoom, this.options.maxZoom);
 
     // if the zoom does not change return
-    if(zoom === this.zoom) {
+    if(zoom === this.view.zoom) {
       return;
     }
 
     // calculate the change in scale between the current zoom level and the target
-    const scale = 1 - 2 ** (this.zoom - zoom);
+    const scale = 1 - 2 ** (this.view.zoom - zoom);
 
     // calculate offset, apply scale and add to current center
-    const newCenter: Point = [
-      (mapPoint[0] - this.center[0]) * scale + this.center[0],
-      (mapPoint[1] - this.center[1]) * scale + this.center[1],
-    ];
+    const offset = subtract(mapPoint, this.view.center);
+    const scaledOffset = multiply(offset, scale);
+    const center = add(this.view.center, scaledOffset);
 
     // set view to new center and zoom
-    this.setView(newCenter, zoom);
+    this.jumpTo({ center, zoom});
   }
 
   setDebug(debug: boolean) {

@@ -24,7 +24,7 @@
       maxZoom: 7,
       minZoom: 1,
     });
-    map.center = [49432, 31440];
+    map.jumpTo({ center: [49432, 31440] });
 
     map.addLayer(new TileLayer({
       source: (x, y, z) => `https://tiles.gw2.io/1/1/${z}/${x}/${y}.jpg`,
@@ -33,9 +33,9 @@
 
     document.getElementById('debug').addEventListener('change', (e) => map.setDebug(e.target.checked));
 
-    document.getElementById('lionsarch').addEventListener('click', () => map.easeView([49500, 31500], 6, {}))
-    document.getElementById('ascalon').addEventListener('click', () => map.easeView([61495, 30150], 3.5, {}))
-    document.getElementById('horn').addEventListener('click', () => map.easeView([23507, 22185], 4, {}))
+    document.getElementById('lionsarch').addEventListener('click', () => map.easeTo({ center: [49500, 31500], zoom: 6 }))
+    document.getElementById('ascalon').addEventListener('click', () => map.easeTo({ center: [61495, 30150], zoom: 3.5 }))
+    document.getElementById('horn').addEventListener('click', () => map.easeTo({ center: [23507, 22185], zoom: 4 }))
 
     window.map = map;
   </script>
