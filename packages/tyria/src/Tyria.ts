@@ -14,22 +14,47 @@ export class Tyria {
   debug = false;
 
   constructor(private container: HTMLElement, public readonly options: TyriaMapOptions) {
-    this.createCanvas(this.container);
+    // create the canvas
+    this.createCanvas();
+
+    // setup event handlers
+    this.setupEvents();
+
+    // queue the first render
     this.queueRender();
   }
 
-  private createCanvas(container: HTMLElement) {
+  private createCanvas() {
+    // create canvas
     this.canvas = document.createElement('canvas');
 
-    const width = container.offsetWidth;
-    const height = container.offsetHeight;
+    // calculate its size
+    this.calculateCanvasSize();
+
+    // append the canvas to the container
+    this.container.appendChild(this.canvas);
+
+    // recalculate size on window resize
+    // TODO: replace with resize observer  to handle resizes for other reasons
+    window.addEventListener('resize', () => this.calculateCanvasSize());
+  }
+
+  /** calculate the size of the canvas based on the container size */
+  private calculateCanvasSize() {
+    const width = this.container.offsetWidth;
+    const height = this.container.offsetHeight;
     const dpr = window.devicePixelRatio || 1;
 
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
-    this.canvas.width = container.offsetWidth * dpr;
-    this.canvas.height = container.offsetHeight * dpr;
+    this.canvas.width = this.container.offsetWidth * dpr;
+    this.canvas.height = this.container.offsetHeight * dpr;
 
+    this.queueRender();
+  }
+
+  private setupEvents() {
+    // handle pan
     let isDragging = false;
     let lastPoint: Point = [0, 0];
     this.canvas.addEventListener('pointerdown', (e) => { isDragging = true; lastPoint = [e.clientX, e.clientY] });
@@ -62,29 +87,9 @@ export class Tyria {
     // log coordinates on click
     this.canvas.addEventListener('click', (e) => {
       // get coordinates at cursor
-      const halfWidth = this.canvas.width / 2;
-      const halfHeight = this.canvas.height / 2;
-
-      const offset: Point = this.unproject([e.offsetX - halfWidth, e.offsetY - halfHeight]);
-      const clickAt = subtract(this.view.center, offset);
-
+      const clickAt = this.canvasPixelToMap([e.offsetX, e.offsetY]);
       console.log(clickAt);
     });
-
-    window.addEventListener('resize', () => {
-      const width = container.offsetWidth;
-      const height = container.offsetHeight;
-      const dpr = window.devicePixelRatio || 1;
-
-      this.canvas.style.width = `${width}px`;
-      this.canvas.style.height = `${height}px`;
-      this.canvas.width = container.offsetWidth * dpr;
-      this.canvas.height = container.offsetHeight * dpr;
-
-      this.render()
-    });
-
-    container.appendChild(this.canvas);
   }
 
   /** projects geographical coordinates to pixels */
@@ -255,7 +260,13 @@ export class Tyria {
 
   /** Instantly jumps to the provided view */
   jumpTo(view: ViewOptions) {
+    // resolve the requested view
     this.view = this.resolveView(view);
+
+    // cancel any in progress easing
+    this.currentEase = undefined;
+
+    // render the changes
     this.queueRender();
   }
 
