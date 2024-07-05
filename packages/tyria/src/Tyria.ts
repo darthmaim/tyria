@@ -1,7 +1,7 @@
 import { Layer, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
 import { Point, View, ViewOptions } from './types';
-import { add, clamp, multiply, subtract } from './util';
+import { add, clamp, easeInOutCubic, multiply, subtract } from './util';
 
 export class Tyria {
   canvas: HTMLCanvasElement;
@@ -275,12 +275,19 @@ export class Tyria {
     // get options
     const {
       duration = 1000,
-      easing = (x) => x,
+      easing = easeInOutCubic,
     } = options ?? {};
 
+    // get start and target of the transition
     const start = this.view;
     const target = this.resolveView(view);
 
+    // if we are not moving, don't move
+    if(target.zoom === start.zoom && target.center[0] === start.center[0] && target.center[1] === start.center[1]) {
+      return;
+    }
+
+    // calculate delta
     const deltaZoom = target.zoom - start.zoom;
     const deltaCenter = subtract(target.center, start.center);
 
