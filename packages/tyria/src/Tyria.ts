@@ -13,6 +13,7 @@ export class Tyria {
   }
   layers: Layer[] = [];
   debug = false
+  debugLastViewOptions?: ViewOptions;
 
   handlers: HandlerManager;
 
@@ -174,6 +175,20 @@ export class Tyria {
       ctx.strokeStyle = 'lime';
       ctx.lineWidth = 2;
       ctx.strokeRect(0, 0, -bounds[0], -bounds[1]);
+
+      // render cover/contains bounds
+      const coverOrContains = this.debugLastViewOptions?.cover ?? this.debugLastViewOptions?.contain;
+      if(coverOrContains) {
+        ctx.strokeStyle = '#ff9800';
+        ctx.fillStyle = '#ff980022';
+        ctx.lineWidth = 2;
+
+        const boundsTopLeft = multiply(this.project(coverOrContains[0]), -1);
+        const boundsBottomRight = multiply(this.project(coverOrContains[1]), -1);
+        ctx.strokeRect(boundsTopLeft[0], boundsTopLeft[1], boundsBottomRight[0] - boundsTopLeft[0], boundsBottomRight[1] - boundsTopLeft[1]);
+        ctx.fillRect(boundsTopLeft[0], boundsTopLeft[1], boundsBottomRight[0] - boundsTopLeft[0], boundsBottomRight[1] - boundsTopLeft[1]);
+      }
+
       ctx.resetTransform();
 
       // render map center
@@ -202,25 +217,90 @@ export class Tyria {
   resolveView(view: ViewOptions): View {
     const current = this.view;
 
-    // make sure the zoom stays between minZoom and maxZoom
-    const snapZoom = (z: number) => this.options.zoomSnap ? Math.round(z / this.options.zoomSnap) * this.options.zoomSnap : z;
-    const zoom = clamp(view.zoom ? snapZoom(view.zoom) : current.zoom, this.options.minZoom, this.options.maxZoom);
+    // controls the rounding direction when zoomSnap is enabled
+    // because if we want to make sure a specific area is visible in the viewport we only want to zoom out
+    let zoomRounding: 'round' | 'floor' | 'ceil' = 'round';
 
-    // set center
+    // get initial center and zoom
     let center = view.center ?? current.center;
+    let zoom = view.zoom ?? current.zoom;
+
+    // make sure the area is completely visible in the viewport
+    // TODO: handle passing contain + center?
+    if(view.contain) {
+      // get size and aspect ration of the area
+      const size = subtract(view.contain[1], view.contain[0]);
+      const aspectRatio = size[0] / size[1];
+
+      // get size and aspect ratio of the viewport
+      const viewportSizePx = [this.canvas.width, this.canvas.height];
+      const viewportAspectRatio = viewportSizePx[0] / viewportSizePx[1];
+
+      // if the area aspect ratio is larger than the viewport aspect ratio the x-axis is the one we have to fit inside the viewport, otherwise its the y-axis
+      const dominantAxis = aspectRatio > viewportAspectRatio ? 0 : 1;
+
+      // calculate zoom so that size[dominantAxis] is equals viewportSize[dominantAxis]
+      const zoomScale = 128 * viewportSizePx[dominantAxis] / size[dominantAxis];
+      const requiredZoom = Math.log2(zoomScale);
+
+      // if a zoom level is passed which is zoomed out enough to fit the area, we don't need to do anything
+      // otherwise we set the zoom to the required zoom to contain the area, ignoring the passed zoom
+      if(!view.zoom || view.zoom > requiredZoom) {
+        zoom = requiredZoom;
+      }
+
+      // set center to the middle of the area
+      center = add(view.contain[0], multiply(size, 0.5));
+
+      // make sure we are zooming out when zoom snapping
+      zoomRounding = 'floor';
+    }
+
+    // make sure the viewport is completely within the specified area
+    // TODO: handle passing cover + center?
+    if(view.cover) {
+      // get size and aspect ration of the area
+      const size = subtract(view.cover[1], view.cover[0]);
+      const aspectRatio = size[0] / size[1];
+
+      // get size and aspect ratio of the viewport
+      const viewportSizePx = [this.canvas.width, this.canvas.height];
+      const viewportAspectRatio = viewportSizePx[0] / viewportSizePx[1];
+
+      // if the aspect ratio is larger than the viewport aspect ratio the y axis is the one we have to match to the viewport, otherwise its the x axis
+      const dominantAxis = aspectRatio > viewportAspectRatio ? 1 : 0;
+
+      // calculate zoom so that size[dominantAxis] is equals viewportSize[dominantAxis]
+      const zoomScale = 128 * viewportSizePx[dominantAxis] / size[dominantAxis];
+      zoom = Math.log2(zoomScale);
+
+      // set center to the middle of the area
+      center = add(view.cover[0], multiply(size, 0.5));
+
+      // make sure we are zooming out when zoom snapping
+      zoomRounding = 'ceil';
+    }
+
+    // snap zoom
+    if(this.options.zoomSnap) {
+      zoom = Math[zoomRounding](zoom / this.options.zoomSnap) * this.options.zoomSnap;
+    }
+
+    // clamp zoom between min and max zoom levels
+    zoom = clamp(zoom, this.options.minZoom, this.options.maxZoom);
 
     // if `around` is set we want to keep that point stationary while zooming
     if(view.around && zoom !== current.zoom) {
       // calculate the change in scale between the current zoom level and the target
-      const scale = 1 - 2 ** (this.view.zoom - zoom);
+      const scale = 1 - 2 ** (current.zoom - zoom);
 
       // calculate offset, apply scale and add to current center
-      const offset = subtract(view.around, this.view.center);
+      const offset = subtract(view.around, current.center);
       const scaledOffset = multiply(offset, scale);
-      center = add(this.view.center, scaledOffset);
+      center = add(current.center, scaledOffset);
     }
 
-    // make sure the center will not be between pixels
+    // make sure the center aligns with device pixels
     if(view.alignToPixels ?? true) {
       const dpr = window.devicePixelRatio ?? 1;
       const centerPx = this.project(center, zoom);
@@ -234,6 +314,8 @@ export class Tyria {
 
   /** Instantly jumps to the provided view */
   jumpTo(view: ViewOptions) {
+    this.debugLastViewOptions = view;
+
     // resolve the requested view
     this.view = this.resolveView(view);
 
@@ -244,8 +326,10 @@ export class Tyria {
     this.queueRender();
   }
 
-  /** Transition to the  */
+  /** Transition to the provided view */
   easeTo(view: ViewOptions, options?: { duration?: number, easing?: (progress: number) => number }) {
+    this.debugLastViewOptions = view;
+
     // get options
     const {
       duration = 1000,
