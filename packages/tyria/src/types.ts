@@ -27,7 +27,7 @@ export type ViewOptions = {
 
   /**
    * Modifies the center to align with device pixels so tiles stay sharp.
-   * @default true
+   * @defaultValue true
    */
   alignToPixels?: boolean;
 }
