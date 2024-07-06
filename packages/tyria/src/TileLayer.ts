@@ -154,10 +154,7 @@ export class TileLayer implements Layer {
 
       for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
         for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
-          const distanceFromCenter = multiply(subtract(divide(subtract([x, y], tileTopLeft), size), 0.5), 2);
-          const distance = (distanceFromCenter[0] + distanceFromCenter[1]) / 2;
-
-          this.renderDebugGrid(context, x, y, zoom, renderedTileSize, renderedTileSize, distanceFromCenter);
+          this.renderDebugGrid(context, x, y, zoom, renderedTileSize, renderedTileSize);
         }
       }
 
@@ -183,7 +180,7 @@ export class TileLayer implements Layer {
     return this.getFallbackTile(getImage, fallbackX, fallbackY, zoom - 1, scale * 0.5)
   }
 
-  renderDebugGrid(context: CanvasRenderingContext2D, x: number, y: number, zoom: number, width: number, height: number, distance: Point) {
+  renderDebugGrid(context: CanvasRenderingContext2D, x: number, y: number, zoom: number, width: number, height: number) {
     const lineWidth = 4;
 
     context.lineWidth = lineWidth;
@@ -195,7 +192,6 @@ export class TileLayer implements Layer {
 
     context.strokeRect(x * width + (lineWidth / 2), y * height + (lineWidth / 2), width - lineWidth, height - lineWidth);
     context.fillText(`${x}, ${y}, ${zoom}`, (x * width + width / 2), (y * height + height / 2));
-    context.fillText(`${(Math.abs(distance[0]) + Math.abs(distance[1])) / 2}`, (x * width + width / 2), (y * height + height / 2) + 16);
   }
 
   preload(context: LayerPreloadContext) {
