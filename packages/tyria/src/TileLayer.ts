@@ -85,7 +85,7 @@ export class TileLayer implements Layer {
     const bufferHeight = (tileBottomRight[1] - tileTopLeft[1] + 1) * tileSize;
 
     // only resize the buffer if we need to
-    if(buffer.width !== bufferWidth || buffer.height !== bufferHeight) {
+    if(buffer.width < bufferWidth || buffer.height < bufferHeight) {
       buffer.width = bufferWidth;
       buffer.height = bufferHeight;
     }
@@ -141,6 +141,7 @@ export class TileLayer implements Layer {
     // draw the buffer to the actual canvas
     context.drawImage(
       buffer,
+      0, 0, bufferWidth, bufferHeight,
       tileTopLeft[0] * renderedTileSize,
       tileTopLeft[1] * renderedTileSize,
       (tileBottomRight[0] - tileTopLeft[0] + 1) * renderedTileSize,
