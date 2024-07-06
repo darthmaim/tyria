@@ -9,7 +9,7 @@ interface ImageResponse {
 }
 
 // limit the concurrency so that later requests with higher priority can still processed before earlier low priority ones
-const MAX_CONCURRENCY = 20;
+const MAX_CONCURRENCY = 16;
 
 // keep track of how many requests are currently running
 let runningRequests = 0;

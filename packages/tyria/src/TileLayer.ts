@@ -1,6 +1,7 @@
 import { ImageManager } from "./image-manager";
 import { Layer, LayerPreloadContext, LayerRenderContext } from "./layer";
 import { Bounds, Point } from "./types";
+import { add, divide, multiply, subtract } from "./util";
 
 export interface TileLayerOptions {
   source: (x: number, y: number, zoom: number) => string;
@@ -51,8 +52,8 @@ export class TileLayer implements Layer {
     const bottomRightY = Math.min(-center[1] + state.height / 2, -boundsBottomRight[1]) - 1;
 
     // convert px position to tiles
-    const tileTopLeft = [Math.floor(topLeftX / renderedTileSize), Math.floor(topLeftY / renderedTileSize)];
-    const tileBottomRight = [Math.floor(bottomRightX / renderedTileSize), Math.floor(bottomRightY / renderedTileSize)];
+    const tileTopLeft: Point = [Math.floor(topLeftX / renderedTileSize), Math.floor(topLeftY / renderedTileSize)];
+    const tileBottomRight: Point = [Math.floor(bottomRightX / renderedTileSize), Math.floor(bottomRightY / renderedTileSize)];
 
     return {
       tileSize,
@@ -97,13 +98,17 @@ export class TileLayer implements Layer {
     // then we only need to render tiles that were not part of the buffer in the previous frame.
     // even if the zoom level changes we could scale the previous buffer, or just keep a buffer per zoom level
 
+    const size = subtract(tileBottomRight, tileTopLeft);
+
     // iterate through all tiles in the viewport
     for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
       for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
+        const distanceFromCenter = multiply(subtract(divide(subtract([x, y], tileTopLeft), size), 0.5), 2);
+        const distance = (Math.abs(distanceFromCenter[0]) + Math.abs(distanceFromCenter[1])) / 2;
 
         // try to get the tile from the cache
         const src = this.options.source(x, y, zoom);
-        const tile = getImage(src);
+        const tile = getImage(src, { priority: 2 - distance });
 
         if(tile) {
           // draw tile
@@ -145,7 +150,10 @@ export class TileLayer implements Layer {
 
       for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
         for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
-          this.renderDebugGrid(context, x, y, zoom, renderedTileSize, renderedTileSize);
+          const distanceFromCenter = multiply(subtract(divide(subtract([x, y], tileTopLeft), size), 0.5), 2);
+          const distance = (distanceFromCenter[0] + distanceFromCenter[1]) / 2;
+
+          this.renderDebugGrid(context, x, y, zoom, renderedTileSize, renderedTileSize, distanceFromCenter);
         }
       }
 
@@ -171,7 +179,7 @@ export class TileLayer implements Layer {
     return this.getFallbackTile(getImage, fallbackX, fallbackY, zoom - 1, scale * 0.5)
   }
 
-  renderDebugGrid(context: CanvasRenderingContext2D, x: number, y: number, zoom: number, width: number, height: number) {
+  renderDebugGrid(context: CanvasRenderingContext2D, x: number, y: number, zoom: number, width: number, height: number, distance: Point) {
     const lineWidth = 4;
 
     context.lineWidth = lineWidth;
@@ -183,6 +191,7 @@ export class TileLayer implements Layer {
 
     context.strokeRect(x * width + (lineWidth / 2), y * height + (lineWidth / 2), width - lineWidth, height - lineWidth);
     context.fillText(`${x}, ${y}, ${zoom}`, (x * width + width / 2), (y * height + height / 2));
+    context.fillText(`${(Math.abs(distance[0]) + Math.abs(distance[1])) / 2}`, (x * width + width / 2), (y * height + height / 2) + 16);
   }
 
   preload(context: LayerPreloadContext) {
@@ -192,10 +201,16 @@ export class TileLayer implements Layer {
       zoom
     } = this.getTiles(context);
 
+    const size = subtract(tileBottomRight, add(tileTopLeft, 1))
+
     for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
       for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
+        // distance from the center (-1...1)
+        const distanceFromCenter = multiply(subtract(divide(subtract([x, y], tileTopLeft), size), 0.5), 2);
+        const distance = (Math.abs(distanceFromCenter[0]) + Math.abs(distanceFromCenter[1])) / 2;
+
         const src = this.options.source(x, y, zoom);
-        context.getImage(src, { priority: 2 });
+        context.getImage(src, { priority: 3 - distance });
       }
     }
   }

@@ -36,6 +36,15 @@ export function multiply(a: Point, b: Point | number): Point {
   ]
 }
 
+export function divide(a: Point, b: Point | number): Point {
+  b = toPoint(b);
+
+  return [
+    a[0] / b[0],
+    a[1] / b[1]
+  ]
+}
+
 export function easeInOutCubic(x: number) {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;;
 }
