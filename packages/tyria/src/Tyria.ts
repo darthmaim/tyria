@@ -115,6 +115,8 @@ export class Tyria {
       throw new Error('Could not get canvas context');
     }
 
+    performance.mark('render-start', { detail: { view: this.view }});
+
     // calculate the global transform of the map
     // this scales the canvas to the correct dpr, so all subsequent drawing does not have to care about dpr
     // and also translates the viewport to the center (so 0,0 is at the top left of the map)
@@ -205,6 +207,10 @@ export class Tyria {
 
       ctx.restore();
     }
+
+
+    performance.mark('render-end');
+    performance.measure('render', 'render-start', 'render-end');
   }
 
   /** Add an additional layer to the map */

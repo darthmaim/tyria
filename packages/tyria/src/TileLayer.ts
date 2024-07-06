@@ -10,14 +10,15 @@ export interface TileLayerOptions {
 }
 
 export class TileLayer implements Layer {
-  private tileCache: Record<`${number},${number},${number}`, { state: 'loading' | 'error' } | { state: 'done', image: ImageBitmap } | undefined> = {}
+  private tileCache: Record<`${number},${number},${number}`, { state: 'loading' | 'error' } | { state: 'done', image: ImageBitmap | HTMLImageElement } | undefined> = {}
 
-  private frameBuffer: HTMLCanvasElement;
+  private frameBuffer: HTMLCanvasElement | OffscreenCanvas;
 
   constructor(private options: TileLayerOptions) {
-    this.frameBuffer = document.createElement('canvas');
-    this.frameBuffer.setAttribute('style', 'width: 256px; position: fixed; top: 16px; right: 16px; border: 4px solid #fff; box-shadow: 0 0 4px rgba(0 0 0 / .4); display: none')
-    document.body.append(this.frameBuffer);
+    this.frameBuffer = new OffscreenCanvas(0, 0);
+    // this.frameBuffer = document.createElement('canvas');
+    // this.frameBuffer.setAttribute('style', 'width: 256px; position: fixed; top: 16px; right: 16px; border: 4px solid #fff; box-shadow: 0 0 4px rgba(0 0 0 / .4); display: none')
+    // document.body.append(this.frameBuffer);
   }
 
   render({ context, state, project, registerPromise }: LayerRenderContext) {
@@ -68,7 +69,7 @@ export class TileLayer implements Layer {
     if(buffer.width !== bufferWidth || buffer.height !== bufferHeight) {
       buffer.width = bufferWidth;
       buffer.height = bufferHeight;
-      buffer.style.aspectRatio = `${buffer.width} / ${buffer.height}`;
+      // buffer.style.aspectRatio = `${buffer.width} / ${buffer.height}`;
     }
 
     // get buffer context to draw to
@@ -90,19 +91,21 @@ export class TileLayer implements Layer {
 
         if(tile === undefined) {
           // load tile
-          const fetchPromise = fetch(this.options.source(x, y, zoom), { headers: { 'accept': 'image/*' } }).then((response) => {
-            if(response.ok) {
-              return response.clone()
-                .blob()
-                .then((blob) => createImageBitmap(blob, { resizeHeight: tileSize, resizeWidth: tileSize }))
-                .then((image) => this.tileCache[tileCacheKey] = { state: 'done', image });
-            } else {
+          const fetchPromise = new Promise<void>((resolve) => {
+            const image = new Image(tileSize, tileSize);
+            image.src = this.options.source(x, y, zoom);
+            image.decoding = 'sync';
+            image.onload = () => {
+              this.tileCache[tileCacheKey] = { state: 'done', image };
+              resolve();
+            };
+            image.onerror = () => {
               this.tileCache[tileCacheKey] = { state: 'error' };
+              resolve();
             }
-          }).catch(() => this.tileCache[tileCacheKey] = { state: 'error' });
+          });
 
           registerPromise(fetchPromise);
-
           this.tileCache[tileCacheKey] = { state: 'loading' };
         }
 
@@ -175,7 +178,7 @@ export class TileLayer implements Layer {
     }
   }
 
-  private getFallbackTile(x, y, zoom, scale = 1): { x: number, y: number, scale, image: ImageBitmap } | undefined {
+  private getFallbackTile(x, y, zoom, scale = 1): { x: number, y: number, scale, image: ImageBitmap | HTMLImageElement } | undefined {
     if(zoom === 0) {
       return;
     }
