@@ -20,8 +20,8 @@ jobs:
     - name: Build github pages
       run: |
         mkdir -p /tmp/github-pages/dist
-        cp packages/tyria/dev /tmp/github-pages
-        cp packages/tyria/dist /tmp/github-pages/dist
+        cp -r packages/tyria/dev /tmp/github-pages
+        cp -r packages/tyria/dist /tmp/github-pages/dist
     - name: Upload github pages artifact
       uses: actions/upload-pages-artifact@v3
       with:
