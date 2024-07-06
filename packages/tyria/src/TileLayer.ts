@@ -127,13 +127,13 @@ export class TileLayer implements Layer {
               fallback.x * tileSize, fallback.y * tileSize, fallback.scale * tileSize, fallback.scale * tileSize,
               (x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize
             );
-
-            bufferCtx.fillStyle = '#0000ff33';
           } else {
-            bufferCtx.fillStyle = '#220000';
+            // clear the rect in the buffer, because it might still contain old tiles
+            bufferCtx.clearRect((x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize);
           }
 
           if(state.debug) {
+            bufferCtx.fillStyle = fallback ? '#0000ff33' : '#220000';
             bufferCtx.fillRect((x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize);
           }
         }
