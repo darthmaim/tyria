@@ -1,4 +1,5 @@
-import { Layer, LayerRenderContext } from "./layer";
+import { ImageManager } from "./image-manager";
+import { Layer, LayerPreloadContext, LayerRenderContext } from "./layer";
 import { Bounds, Point } from "./types";
 
 export interface TileLayerOptions {
@@ -10,9 +11,9 @@ export interface TileLayerOptions {
 }
 
 export class TileLayer implements Layer {
-  private tileCache: Record<`${number},${number},${number}`, { state: 'loading' | 'error' } | { state: 'done', image: ImageBitmap | HTMLImageElement } | undefined> = {}
-
   private frameBuffer: HTMLCanvasElement | OffscreenCanvas;
+
+  private imageManager = new ImageManager();
 
   constructor(private options: TileLayerOptions) {
     this.frameBuffer = new OffscreenCanvas(0, 0);
@@ -21,7 +22,7 @@ export class TileLayer implements Layer {
     // document.body.append(this.frameBuffer);
   }
 
-  render({ context, state, project, registerPromise }: LayerRenderContext) {
+  getTiles({ state, project }) {
     // get the zoom level of tiles to use (prefer higher resolution)
     const zoom = Math.ceil(state.zoom);
 
@@ -34,8 +35,7 @@ export class TileLayer implements Layer {
     const renderedTileSize = state.zoom % 1 === 0 ? tileSize : 0.5 * (2 ** (state.zoom % 1)) * tileSize;
 
     if(renderedTileSize < tileSize / 2) {
-      // something is messed up, skip render to not use unnecessary performance
-      return;
+      throw new Error('Wrong tile size')
     }
 
     const center = project(state.center);
@@ -56,6 +56,24 @@ export class TileLayer implements Layer {
     const tileTopLeft = [Math.floor(topLeftX / renderedTileSize), Math.floor(topLeftY / renderedTileSize)];
     const tileBottomRight = [Math.floor(bottomRightX / renderedTileSize), Math.floor(bottomRightY / renderedTileSize)];
 
+    return {
+      tileSize,
+      tileTopLeft,
+      tileBottomRight,
+      zoom,
+      renderedTileSize,
+    }
+  }
+
+  render({ context, state, project, registerPromise }: LayerRenderContext) {
+    // get tiles in viewport
+    const {
+      tileSize,
+      tileTopLeft,
+      tileBottomRight,
+      zoom,
+      renderedTileSize
+    } = this.getTiles({ state, project });
 
     // create buffer canvas to render
     const buffer = this.frameBuffer;
@@ -86,42 +104,13 @@ export class TileLayer implements Layer {
       for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
 
         // try to get the tile from the cache
-        const tileCacheKey = `${x},${y},${zoom}` as const;
-        const tile = this.tileCache[tileCacheKey];
+        const src = this.options.source(x, y, zoom);
+        const tile = this.imageManager.get(src);
 
-        if(tile === undefined) {
-          // load tile
-          const fetchPromise = new Promise<void>((resolve) => {
-            const image = new Image(tileSize, tileSize);
-            image.src = this.options.source(x, y, zoom);
-            image.decoding = 'sync';
-            image.onload = () => {
-              this.tileCache[tileCacheKey] = { state: 'done', image };
-              resolve();
-            };
-            image.onerror = () => {
-              this.tileCache[tileCacheKey] = { state: 'error' };
-              resolve();
-            }
-          });
-
-          registerPromise(fetchPromise);
-          this.tileCache[tileCacheKey] = { state: 'loading' };
-        }
-
-        if(tile?.state === 'done') {
+        if(tile) {
           // draw tile
-          bufferCtx.drawImage(tile.image, (x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize);
+          bufferCtx.drawImage(tile, (x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize);
           bufferCtx.strokeStyle = 'orange';
-        } else if(tile?.state === 'error') {
-          // tile loading errored...
-          context.beginPath();
-          context.rect(x * renderedTileSize, y * renderedTileSize, renderedTileSize, renderedTileSize);
-          context.moveTo(x * renderedTileSize, y * renderedTileSize);
-          context.lineTo(x * renderedTileSize + renderedTileSize - 1, y * renderedTileSize + renderedTileSize - 1);
-          context.strokeStyle = 'red';
-          context.lineWidth = 1;
-          context.stroke();
         } else {
           // render fallback
           const fallback = this.getFallbackTile(x, y, zoom);
@@ -132,6 +121,14 @@ export class TileLayer implements Layer {
               fallback.x * tileSize, fallback.y * tileSize, fallback.scale * tileSize, fallback.scale * tileSize,
               (x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize
             );
+
+            bufferCtx.fillStyle = '#0000ff33';
+          } else {
+            bufferCtx.fillStyle = '#220000';
+          }
+
+          if(state.debug) {
+            bufferCtx.fillRect((x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize);
           }
         }
       }
@@ -146,36 +143,18 @@ export class TileLayer implements Layer {
       (tileBottomRight[1] - tileTopLeft[1] + 1) * renderedTileSize);
 
     if(state.debug) {
-      context.textBaseline = 'top';
-
       context.save();
+
       for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
         for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
           this.renderDebugGrid(context, x, y, zoom, renderedTileSize, renderedTileSize);
         }
       }
+
       context.restore();
-
-      // visible box
-      context.strokeStyle = '#ffc107';
-      context.lineWidth = 2;
-      context.setLineDash([8, 8]);
-      context.strokeRect(topLeftX, topLeftY, bottomRightX - topLeftX + 1, bottomRightY - topLeftY + 1);
-      context.setLineDash([]);
-
-      // tile size
-      context.font = 'bold 12px monospace';
-      context.fillStyle = '#fff';
-      context.fillText(`TileSize: ${tileSize} @ ${renderedTileSize}`, topLeftX + 8, topLeftY + 8);
-      context.fillText(`ViewBox: x ${topLeftX}`, topLeftX + 8, topLeftY + 8 + 16);
-      context.fillText(`         y ${topLeftY}`, topLeftX + 8, topLeftY + 8 + 32);
-      context.fillText(`         w ${bottomRightX - topLeftX + 1}`, topLeftX + 8, topLeftY + 8 + 48);
-      context.fillText(`         h ${bottomRightY - topLeftY + 1}`, topLeftX + 8, topLeftY + 8 + 64);
-
-      // center
-      context.fillStyle = 'pink';
-      context.fillRect(-center[0] - 4, -center[1] - 4, 8, 8);
     }
+
+    registerPromise(this.imageManager.tick());
   }
 
   private getFallbackTile(x, y, zoom, scale = 1): { x: number, y: number, scale, image: ImageBitmap | HTMLImageElement } | undefined {
@@ -186,11 +165,11 @@ export class TileLayer implements Layer {
     const fallbackX = x / 2;
     const fallbackY = y / 2;
 
-    const cacheKey = `${Math.floor(fallbackX)},${Math.floor(fallbackY)},${zoom - 1}` as const;
-    const cached = this.tileCache[cacheKey];
+    const src = this.options.source(Math.floor(fallbackX), Math.floor(fallbackY), zoom - 1);
+    const image = this.imageManager.get(src, { priority: 0, cacheOnly: true });
 
-    if(cached?.state === 'done') {
-      return { image: cached.image, scale: scale * 0.5, x: fallbackX % 1, y: fallbackY % 1 };
+    if(image) {
+      return { image, scale: scale * 0.5, x: fallbackX % 1, y: fallbackY % 1 };
     }
 
     return this.getFallbackTile(fallbackX, fallbackY, zoom - 1, scale * 0.5)
@@ -201,11 +180,30 @@ export class TileLayer implements Layer {
 
     context.lineWidth = lineWidth;
     context.textAlign = 'center';
+    context.textBaseline = 'top';
     context.font = 'bold 16px monospace'
     context.strokeStyle = (x + y) % 2 === 0 ? '#f4433633' : '#2196f333';
     context.fillStyle = (x + y) % 2 === 0 ? '#f44336' : '#2196f3';
 
     context.strokeRect(x * width + (lineWidth / 2), y * height + (lineWidth / 2), width - lineWidth, height - lineWidth);
     context.fillText(`${x}, ${y}, ${zoom}`, (x * width + width / 2), (y * height + height / 2));
+  }
+
+  preload(context: LayerPreloadContext) {
+    const {
+      tileSize,
+      tileTopLeft,
+      tileBottomRight,
+      zoom
+    } = this.getTiles(context);
+
+    for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
+      for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
+        const src = this.options.source(x, y, zoom);
+        this.imageManager.get(src, { priority: 2 });
+      }
+    }
+
+    this.imageManager.tick();
   }
 }

@@ -1,5 +1,5 @@
 import { HandlerManager } from './events/manager';
-import { Layer, LayerRenderContext } from './layer';
+import { Layer, LayerPreloadContext, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
 import { Point, View, ViewOptions } from './types';
 import { add, clamp, easeInOutCubic, multiply, subtract } from './util';
@@ -346,6 +346,9 @@ export class Tyria {
     const start = this.view;
     const target = this.resolveView(view);
 
+    // preload target view
+    this.preload(target);
+
     // if we are not moving, don't move
     if(target.zoom === start.zoom && target.center[0] === start.center[0] && target.center[1] === start.center[1]) {
       return;
@@ -443,5 +446,29 @@ export class Tyria {
   setDebug(debug: boolean) {
     this.debug = debug;
     this.queueRender();
+  }
+
+  /** Preload an area */
+  preload(view: ViewOptions) {
+    const target = this.resolveView(view);
+
+    const dpr = window.devicePixelRatio || 1;
+    const preloadContext: LayerPreloadContext = {
+      project: (point: Point) => this.project(point, target.zoom),
+      unproject: (point: Point) => this.project(point, target.zoom),
+      registerPromise: (promise) => promise.then(() => this.queueRender('low-priority')),
+      state: {
+        center: target.center,
+        zoom: target.zoom,
+        width: this.canvas.width / dpr,
+        height: this.canvas.height / dpr,
+        dpr: dpr,
+        debug: this.debug,
+      }
+    };
+
+    for(const layer of this.layers) {
+      layer.preload?.(preloadContext);
+    }
   }
 }

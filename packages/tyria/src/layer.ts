@@ -1,8 +1,8 @@
-import { Tyria } from "./Tyria";
-import { Bounds, Point } from "./types";
+import { Point } from "./types";
 
 export interface Layer {
   render(context: LayerRenderContext)
+  preload?(context: LayerPreloadContext);
 }
 
 export interface LayerRenderContext {
@@ -30,3 +30,5 @@ export interface LayerRenderContext {
   unproject: (point: Point) => Point,
   registerPromise: (promise: Promise<any>) => void,
 }
+
+export type LayerPreloadContext = Omit<LayerRenderContext, 'context'>;
