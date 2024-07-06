@@ -1,7 +1,8 @@
-import { ImageManager } from "./image-manager";
 import { Layer, LayerPreloadContext, LayerRenderContext } from "./layer";
 import { Bounds, Point } from "./types";
 import { add, divide, multiply, subtract } from "./util";
+
+const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
 
 export interface TileLayerOptions {
   source: (x: number, y: number, zoom: number) => string;
@@ -15,10 +16,11 @@ export class TileLayer implements Layer {
   private frameBuffer: HTMLCanvasElement | OffscreenCanvas;
 
   constructor(private options: TileLayerOptions) {
-    this.frameBuffer = new OffscreenCanvas(0, 0);
-    // this.frameBuffer = document.createElement('canvas');
-    // this.frameBuffer.setAttribute('style', 'width: 256px; position: fixed; top: 16px; right: 16px; border: 4px solid #fff; box-shadow: 0 0 4px rgba(0 0 0 / .4); display: none')
-    // document.body.append(this.frameBuffer);
+    // don't use OffscreenCanvas in firefox because it is really fucking slow (canvas.drawImage(OffscreenCanvas) takes 50ms if FF, createElement('canvas') "just" 5ms)
+    // but the same in chrome is fast (OffscreenCanvas 0.2ms, createElement('canvas') 0.8ms)
+    this.frameBuffer = isFirefox
+      ? document.createElement('canvas')
+      : new OffscreenCanvas(0, 0);
   }
 
   getTiles({ state, project }) {
@@ -86,7 +88,6 @@ export class TileLayer implements Layer {
     if(buffer.width !== bufferWidth || buffer.height !== bufferHeight) {
       buffer.width = bufferWidth;
       buffer.height = bufferHeight;
-      // buffer.style.aspectRatio = `${buffer.width} / ${buffer.height}`;
     }
 
     // get buffer context to draw to
