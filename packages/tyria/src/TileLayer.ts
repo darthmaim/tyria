@@ -84,8 +84,10 @@ export class TileLayer implements Layer {
     const bufferWidth = (tileBottomRight[0] - tileTopLeft[0] + 1) * tileSize;
     const bufferHeight = (tileBottomRight[1] - tileTopLeft[1] + 1) * tileSize;
 
-    // only resize the buffer if we need to
-    if(buffer.width < bufferWidth || buffer.height < bufferHeight) {
+    // grow the buffer if it is not large enough
+    // if it exceeds the required size by 2.2, shrink it to save some memory
+    // 2.2 was chosen because it is often twice the size when switching to the next higher zoom level, and we don't want to resize then already
+    if(buffer.width < bufferWidth || buffer.height < bufferHeight || buffer.width > bufferWidth * 2.2 || buffer.height > bufferHeight * 2.2) {
       buffer.width = bufferWidth;
       buffer.height = bufferHeight;
     }
