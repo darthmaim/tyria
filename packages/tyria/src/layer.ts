@@ -28,7 +28,7 @@ export interface LayerRenderContext {
   },
   project: (coordinate: Point) => Point,
   unproject: (point: Point) => Point,
-  registerPromise: (promise: Promise<any>) => void,
+  getImage: (src: string, options?: { priority?: number, cacheOnly?: boolean }) => ImageBitmap | undefined,
 }
 
 export type LayerPreloadContext = Omit<LayerRenderContext, 'context'>;

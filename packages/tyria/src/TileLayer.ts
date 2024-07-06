@@ -13,8 +13,6 @@ export interface TileLayerOptions {
 export class TileLayer implements Layer {
   private frameBuffer: HTMLCanvasElement | OffscreenCanvas;
 
-  private imageManager = new ImageManager();
-
   constructor(private options: TileLayerOptions) {
     this.frameBuffer = new OffscreenCanvas(0, 0);
     // this.frameBuffer = document.createElement('canvas');
@@ -65,7 +63,7 @@ export class TileLayer implements Layer {
     }
   }
 
-  render({ context, state, project, registerPromise }: LayerRenderContext) {
+  render({ context, state, project, getImage }: LayerRenderContext) {
     // get tiles in viewport
     const {
       tileSize,
@@ -105,7 +103,7 @@ export class TileLayer implements Layer {
 
         // try to get the tile from the cache
         const src = this.options.source(x, y, zoom);
-        const tile = this.imageManager.get(src);
+        const tile = getImage(src);
 
         if(tile) {
           // draw tile
@@ -113,7 +111,7 @@ export class TileLayer implements Layer {
           bufferCtx.strokeStyle = 'orange';
         } else {
           // render fallback
-          const fallback = this.getFallbackTile(x, y, zoom);
+          const fallback = this.getFallbackTile(getImage, x, y, zoom);
 
           if(fallback) {
             bufferCtx.drawImage(
@@ -153,11 +151,9 @@ export class TileLayer implements Layer {
 
       context.restore();
     }
-
-    registerPromise(this.imageManager.tick());
   }
 
-  private getFallbackTile(x, y, zoom, scale = 1): { x: number, y: number, scale, image: ImageBitmap | HTMLImageElement } | undefined {
+  private getFallbackTile(getImage: LayerRenderContext['getImage'], x, y, zoom, scale = 1): { x: number, y: number, scale, image: ImageBitmap | HTMLImageElement } | undefined {
     if(zoom === 0) {
       return;
     }
@@ -166,13 +162,13 @@ export class TileLayer implements Layer {
     const fallbackY = y / 2;
 
     const src = this.options.source(Math.floor(fallbackX), Math.floor(fallbackY), zoom - 1);
-    const image = this.imageManager.get(src, { priority: 0, cacheOnly: true });
+    const image = getImage(src, { cacheOnly: true });
 
     if(image) {
       return { image, scale: scale * 0.5, x: fallbackX % 1, y: fallbackY % 1 };
     }
 
-    return this.getFallbackTile(fallbackX, fallbackY, zoom - 1, scale * 0.5)
+    return this.getFallbackTile(getImage, fallbackX, fallbackY, zoom - 1, scale * 0.5)
   }
 
   renderDebugGrid(context: CanvasRenderingContext2D, x: number, y: number, zoom: number, width: number, height: number) {
@@ -191,7 +187,6 @@ export class TileLayer implements Layer {
 
   preload(context: LayerPreloadContext) {
     const {
-      tileSize,
       tileTopLeft,
       tileBottomRight,
       zoom
@@ -200,10 +195,8 @@ export class TileLayer implements Layer {
     for(let x = tileTopLeft[0]; x <= tileBottomRight[0]; x++) {
       for(let y = tileTopLeft[1]; y <= tileBottomRight[1]; y++) {
         const src = this.options.source(x, y, zoom);
-        this.imageManager.get(src, { priority: 2 });
+        context.getImage(src, { priority: 2 });
       }
     }
-
-    this.imageManager.tick();
   }
 }

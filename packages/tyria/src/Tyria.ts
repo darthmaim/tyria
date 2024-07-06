@@ -1,4 +1,5 @@
 import { HandlerManager } from './events/manager';
+import { ImageManager } from './image-manager';
 import { Layer, LayerPreloadContext, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
 import { Point, View, ViewOptions } from './types';
@@ -16,13 +17,15 @@ export class Tyria {
   debugLastViewOptions?: ViewOptions;
 
   handlers: HandlerManager;
+  imageManager: ImageManager;
 
   constructor(private container: HTMLElement, public readonly options: TyriaMapOptions) {
     // create the canvas
     this.createCanvas();
 
-    // setup event handlers
+    // setup managers
     this.handlers = new HandlerManager(this);
+    this.imageManager = new ImageManager(this);
 
     // queue the first render
     this.queueRender();
@@ -77,7 +80,7 @@ export class Tyria {
   private _renderQueued: false | 'next-frame' | 'low-priority' = false;
   private _renderQueueFrame: number;
   private _renderQueueTimeout: number;
-  private queueRender(priority: 'next-frame' | 'low-priority' = 'next-frame') {
+  queueRender(priority: 'next-frame' | 'low-priority' = 'next-frame') {
     // don't queue if it is already queued with same or higher priority
     if(this._renderQueued === priority || this._renderQueued === 'next-frame') {
       return;
@@ -142,7 +145,7 @@ export class Tyria {
       },
       project: this.project.bind(this),
       unproject: this.unproject.bind(this),
-      registerPromise: (promise) => promise.then(() => this.queueRender('low-priority')),
+      getImage: (src, options) => this.imageManager.get(src, options),
     }
 
     // fill the whole canvas with background
@@ -208,6 +211,7 @@ export class Tyria {
       ctx.restore();
     }
 
+    this.imageManager.requestQueuedImages();
 
     performance.mark('render-end');
     performance.measure('render', 'render-start', 'render-end');
@@ -456,7 +460,7 @@ export class Tyria {
     const preloadContext: LayerPreloadContext = {
       project: (point: Point) => this.project(point, target.zoom),
       unproject: (point: Point) => this.project(point, target.zoom),
-      registerPromise: (promise) => promise.then(() => this.queueRender('low-priority')),
+      getImage: (src, options) => this.imageManager.get(src, options),
       state: {
         center: target.center,
         zoom: target.zoom,
@@ -470,5 +474,7 @@ export class Tyria {
     for(const layer of this.layers) {
       layer.preload?.(preloadContext);
     }
+
+    this.imageManager.requestQueuedImages();
   }
 }
