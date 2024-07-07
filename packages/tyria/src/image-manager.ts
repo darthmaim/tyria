@@ -34,6 +34,8 @@ export class ImageManager {
     }
   }
 
+  #lastRender: number = 0;
+
   requestQueuedImages() {
     // if we have something to queue, post them to the worker to fetch them
     if(this.queue.length > 0) {
@@ -47,8 +49,8 @@ export class ImageManager {
     if(this.lastCleanup + 1000 < now) {
       // iterate over all cache entries
       for(const [key, { lastUsed, image }] of this.cache.entries()) {
-        // evict images that were not used within the last 10s
-        if(lastUsed < now - 10000) {
+        // evict images that were not used within the last 10s, unless they were used within 1s of last render
+        if(lastUsed < now - 10000 && lastUsed < this.#lastRender - 1000) {
           this.cache.delete(key);
           image?.close();
         }
@@ -56,6 +58,8 @@ export class ImageManager {
 
       this.lastCleanup = now;
     }
+
+    this.#lastRender = now;
   }
 
   get(src: string, { priority = 1, cacheOnly = false }: { priority?: number, cacheOnly?: boolean } = {}): ImageBitmap | undefined {
