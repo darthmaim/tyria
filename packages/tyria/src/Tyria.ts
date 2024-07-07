@@ -35,6 +35,7 @@ export class Tyria {
     // create canvas
     this.canvas = document.createElement('canvas');
     this.canvas.style.touchAction = 'none';
+    this.canvas.style.userSelect = 'none';
 
     // calculate its size
     this.calculateCanvasSize();
