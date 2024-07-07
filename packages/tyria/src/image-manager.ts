@@ -46,10 +46,11 @@ export class ImageManager {
     // cleanup the cache every second
     if(this.lastCleanup + 1000 < now) {
       // iterate over all cache entries
-      for(const [key, { lastUsed }] of this.cache.entries()) {
+      for(const [key, { lastUsed, image }] of this.cache.entries()) {
         // evict images that were not used within the last 10s
         if(lastUsed < now - 10000) {
           this.cache.delete(key);
+          image?.close();
         }
       }
 

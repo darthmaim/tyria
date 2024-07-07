@@ -57,7 +57,9 @@ let respondFrame: number | undefined;
 function respond() {
   this.respondFrame = undefined;
 
-  postMessage(ready);
+  const transfer = ready.map(({ image }) => image).filter(Boolean) as ImageBitmap[];
+
+  postMessage(ready, { transfer });
   ready = [];
 
   if(queue.length > 0) {
