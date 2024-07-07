@@ -1,4 +1,4 @@
-import { HandlerManager } from './events/manager';
+import { HandlerManager } from './handlers/manager';
 import { ImageManager } from './image-manager';
 import { Layer, LayerPreloadContext, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
