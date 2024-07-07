@@ -61,20 +61,18 @@ export class Tyria {
     this.queueRender();
   }
 
-  /** projects geographical coordinates to pixels */
+  /** projects geographical coordinates to pixels at a given zoom */
   project([x, y]: Point, zoom?: number): Point {
-    // TODO: 128 (2^7) is currently hardcoded to match the maxZoom of the gw2 map, which also is the level at which coordinate = px
-    // this has to be configurable, and the assumption that there is a zoom level at which coordinates = px is probably also wrong for other maps
-    const zoomFactor = 2 ** (zoom ?? this.view.zoom);
-    return [-x / 128 * zoomFactor, -y / 128 * zoomFactor];
+    const zoomScale = 2 ** (zoom ?? this.view.zoom);
+    const nativeZoomScale = 2 ** (this.options.nativeZoom ?? this.options.maxZoom ?? 0)
+    return [x / nativeZoomScale * zoomScale, y / nativeZoomScale * zoomScale];
   }
 
-  /** projects pixels to geographical coordinates */
+  /** projects pixels to geographical coordinates at a given zoom */
   unproject([x, y]: Point, zoom?: number): Point {
-    // TODO: 128 (2^7) is currently hardcoded to match the maxZoom of the gw2 map, which also is the level at which coordinate = px
-    // this has to be configurable, and the assumption that there is a zoom level at which coordinates = px is probably also wrong for other maps
-    const zoomFactor = 2 ** (zoom ?? this.view.zoom);
-    return [-x * 128 / zoomFactor, -y * 128 / zoomFactor];
+    const zoomScale = 2 ** (zoom ?? this.view.zoom);
+    const nativeZoomScale = 2 ** (this.options.nativeZoom ?? this.options.maxZoom ?? 0)
+    return [x * nativeZoomScale / zoomScale, y * nativeZoomScale / zoomScale];
   }
 
   private _renderQueued: false | 'next-frame' | 'low-priority' = false;
@@ -127,8 +125,8 @@ export class Tyria {
     const width = this.canvas.width / dpr;
     const height = this.canvas.height / dpr;
     const translate = this.project(this.view.center);
-    const translateX = translate[0] + (width / 2);
-    const translateY = translate[1] + (height / 2);
+    const translateX = -translate[0] + (width / 2);
+    const translateY = -translate[1] + (height / 2);
 
     const transform = new DOMMatrix([dpr, 0, 0, dpr, translateX * dpr, translateY * dpr]);
 
@@ -179,7 +177,7 @@ export class Tyria {
       const bounds = this.project([81920, 114688])
       ctx.strokeStyle = 'lime';
       ctx.lineWidth = 2;
-      ctx.strokeRect(0, 0, -bounds[0], -bounds[1]);
+      ctx.strokeRect(0, 0, bounds[0], bounds[1]);
 
       // render cover/contains bounds
       const coverOrContains = this.debugLastViewOptions?.cover ?? this.debugLastViewOptions?.contain;
@@ -204,8 +202,8 @@ export class Tyria {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillStyle = '#fff';
-      ctx.fillText(`${this.project(this.view.center)[0]}, ${this.project(this.view.center)[1]} px`, 8, 0);
-      ctx.fillText(`${this.view.center[0]}, ${this.view.center[1]} coord`, 8, 16);
+      ctx.fillText(`px ${translate[0]}, ${translate[1]}`, 8, 0);
+      ctx.fillText(`map ${this.view.center[0]}, ${this.view.center[1]}`, 8, 16);
       ctx.fillText(`zoom ${this.view.zoom}`, 8, 32);
 
       ctx.restore();
@@ -250,7 +248,7 @@ export class Tyria {
       const dominantAxis = aspectRatio > viewportAspectRatio ? 0 : 1;
 
       // calculate zoom so that size[dominantAxis] is equals viewportSize[dominantAxis]
-      const zoomScale = 128 * viewportSizePx[dominantAxis] / size[dominantAxis];
+      const zoomScale = 2 ** (this.options.nativeZoom ?? this.options.maxZoom ?? 0) * viewportSizePx[dominantAxis] / size[dominantAxis];
       const requiredZoom = Math.log2(zoomScale);
 
       // if a zoom level is passed which is zoomed out enough to fit the area, we don't need to do anything
@@ -281,7 +279,7 @@ export class Tyria {
       const dominantAxis = aspectRatio > viewportAspectRatio ? 1 : 0;
 
       // calculate zoom so that size[dominantAxis] is equals viewportSize[dominantAxis]
-      const zoomScale = 128 * viewportSizePx[dominantAxis] / size[dominantAxis];
+      const zoomScale = 2 ** (this.options.nativeZoom ?? this.options.maxZoom ?? 0) * viewportSizePx[dominantAxis] / size[dominantAxis];
       zoom = Math.log2(zoomScale);
 
       // set center to the middle of the area
@@ -441,7 +439,7 @@ export class Tyria {
     const halfWidth = this.canvas.width / dpr / 2;
     const halfHeight = this.canvas.height / dpr / 2;
 
-    const offset: Point = this.unproject([x - halfWidth, y - halfHeight]);
+    const offset: Point = this.unproject([-x + halfWidth, -y + halfHeight]);
 
     return subtract(this.view.center, offset);
   }

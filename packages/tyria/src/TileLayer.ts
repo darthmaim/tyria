@@ -46,12 +46,12 @@ export class TileLayer implements Layer {
     const boundsBottomRight = project(this.options.bounds?.[1] ?? [0, 0]);
 
     // get the top left position (px)
-    const topLeftX = Math.max(-center[0] - state.width / 2, boundsTopLeft[0]);
-    const topLeftY = Math.max(-center[1] - state.height / 2, boundsTopLeft[1]);
+    const topLeftX = Math.max(center[0] - state.width / 2, boundsTopLeft[0]);
+    const topLeftY = Math.max(center[1] - state.height / 2, boundsTopLeft[1]);
 
     // get the top right position (px)
-    const bottomRightX = Math.min(-center[0] + state.width / 2, -boundsBottomRight[0]) - 1;
-    const bottomRightY = Math.min(-center[1] + state.height / 2, -boundsBottomRight[1]) - 1;
+    const bottomRightX = Math.min(center[0] + state.width / 2, boundsBottomRight[0]) - 1;
+    const bottomRightY = Math.min(center[1] + state.height / 2, boundsBottomRight[1]) - 1;
 
     // convert px position to tiles
     const tileTopLeft: Point = [Math.floor(topLeftX / renderedTileSize), Math.floor(topLeftY / renderedTileSize)];

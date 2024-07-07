@@ -33,13 +33,13 @@ export class PanHandler extends Handler {
       return;
     }
 
+    const point: Point = [event.clientX, event.clientY];
+
     // get the delta the pointer was moved by and unproject to coordinate space
-    const delta = this.map.unproject(
-      subtract([event.clientX, event.clientY], this.#lastPoint)
-    );
+    const delta = this.map.unproject(subtract(this.#lastPoint, point));
 
     // store last point to calculate next delta
-    this.#lastPoint = [event.clientX, event.clientY];
+    this.#lastPoint = point;
 
     // update the view
     return {
