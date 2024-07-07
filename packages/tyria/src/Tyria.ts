@@ -186,8 +186,8 @@ export class Tyria {
         ctx.fillStyle = '#ff980022';
         ctx.lineWidth = 2;
 
-        const boundsTopLeft = multiply(this.project(coverOrContains[0]), -1);
-        const boundsBottomRight = multiply(this.project(coverOrContains[1]), -1);
+        const boundsTopLeft = this.project(coverOrContains[0]);
+        const boundsBottomRight = this.project(coverOrContains[1]);
         ctx.strokeRect(boundsTopLeft[0], boundsTopLeft[1], boundsBottomRight[0] - boundsTopLeft[0], boundsBottomRight[1] - boundsTopLeft[1]);
         ctx.fillRect(boundsTopLeft[0], boundsTopLeft[1], boundsBottomRight[0] - boundsTopLeft[0], boundsBottomRight[1] - boundsTopLeft[1]);
       }
