@@ -5,7 +5,7 @@ interface ImageRequest {
 
 interface ImageResponse {
   src: string;
-  image: ImageBitmap;
+  image: ImageBitmap | undefined;
 }
 
 // limit the concurrency so that later requests with higher priority can still processed before earlier low priority ones
@@ -39,7 +39,8 @@ function processQueue() {
     fetch(src, { headers: { 'accept': 'image/*' }, credentials: 'omit' })
       .then((r) => r.clone().blob())
       .then((blob) => createImageBitmap(blob))
-      .then((image) => handleReady({ src, image }));
+      .then((image) => handleReady({ src, image }))
+      .catch((error) => handleReady({ src, image: undefined }));
   }
 }
 

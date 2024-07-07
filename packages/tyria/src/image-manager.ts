@@ -23,7 +23,7 @@ export class ImageManager {
     this.worker = new Worker(new URL('./image-fetch-worker.mjs', import.meta.url));
 
     this.worker.onmessage = (e) => {
-      const entries = e.data as { src: string, image: ImageBitmap }[];
+      const entries = e.data as { src: string, image: ImageBitmap | undefined }[];
 
       for(const { src, image } of entries) {
         this.cache.set(src, { image, lastUsed: performance.now() });
