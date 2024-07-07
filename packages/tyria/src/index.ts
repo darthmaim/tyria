@@ -1,2 +1,2 @@
 export { Tyria } from './Tyria';
-export { TileLayer } from './TileLayer';
+export { TileLayer } from './layers/TileLayer';

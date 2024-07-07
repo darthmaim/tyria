@@ -1,6 +1,6 @@
-import { Layer, LayerPreloadContext, LayerRenderContext } from "./layer";
-import { Bounds, Point } from "./types";
-import { add, divide, multiply, subtract } from "./util";
+import { Layer, LayerPreloadContext, LayerRenderContext } from "../layer";
+import { Bounds, Point } from "../types";
+import { add, divide, multiply, subtract } from "../util";
 
 const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
 
