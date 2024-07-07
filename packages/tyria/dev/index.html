@@ -84,13 +84,14 @@
       minZoom: 1,
       zoomSnap: .5,
     });
-    map.jumpTo({ center: [49432, 31440], zoom: 2.5 });
-    map.easeTo({ zoom: 3 }, { duration: 2000, easing: (x) => 1 - Math.pow(1 - x, 3) });
 
     map.addLayer(new TileLayer({
       source: (x, y, z) => `https://tiles.gw2.io/1/1/${z}/${x}/${y}.jpg`,
       bounds: [[0, 0], [81920, 114688]],
     }));
+    
+    map.jumpTo({ center: [49432, 31440], zoom: 2.5 });
+    map.easeTo({ zoom: 3 }, { duration: 2000, easing: (x) => 1 - Math.pow(1 - x, 3) });
 
     document.getElementById('debug').addEventListener('change', (e) => map.setDebug(e.target.checked));
 
