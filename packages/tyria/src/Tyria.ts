@@ -129,6 +129,9 @@ export class Tyria {
       throw new Error('Could not get canvas context');
     }
 
+    // run any current animation
+    this.easeTick();
+
     // preload images
     this.#preloadImages();
 
@@ -353,7 +356,6 @@ export class Tyria {
     // cancel any in progress easing
     if(this.currentEase) {
       this.currentEase = undefined;
-      this.#renderQueued = false;
     }
 
     // render the changes
@@ -410,9 +412,6 @@ export class Tyria {
       // set view to the calculated center and zoom
       this.view = { center, zoom };
 
-      // we are in an animationFrame already, so we can just immediately render (setView only queued a render next frame)
-      this.render();
-
       if(progress === 1) {
         performance.mark('easeTo-end');
         performance.measure('easeTo', 'easeTo-start', 'easeTo-end');
@@ -427,15 +426,16 @@ export class Tyria {
     } else {
       // store current ease and queue frame
       this.currentEase = { frame, duration, start: performance.now() }
-      requestAnimationFrame(this.easeTick);
     }
+
+    this.queueRender();
   }
 
   /** The currently running easing */
   currentEase: { frame: (progress: number) => void, start: number, duration: number } | undefined;
 
   /** Tick function called repeatedly while an easing is running */
-  easeTick = () => {
+  easeTick() {
     // if there is no current animation, return
     if(!this.currentEase) {
       return;
@@ -454,8 +454,7 @@ export class Tyria {
     // if the animation is not yet finished, queue another frame,
     // otherwise unset the current one
     if(progress < 1) {
-      requestAnimationFrame(this.easeTick)
-      this.#renderQueued = 'next-frame';
+      this.queueRender();
     } else {
       this.currentEase = undefined;
     }
