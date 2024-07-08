@@ -76,39 +76,45 @@ export class Tyria {
     return [x * nativeZoomScale / zoomScale, y * nativeZoomScale / zoomScale];
   }
 
-  private _renderQueued: false | 'next-frame' | 'low-priority' = false;
-  private _renderQueueFrame: number;
-  private _renderQueueTimeout: number;
+  #renderQueued: false | 'next-frame' | 'low-priority' = false;
+  #renderQueueFrame?: number;
+  #renderQueueTimeout?: number;
   queueRender(priority: 'next-frame' | 'low-priority' = 'next-frame') {
     // don't queue if it is already queued with same or higher priority
-    if(this._renderQueued === priority || this._renderQueued === 'next-frame') {
+    if(this.#renderQueued === priority || this.#renderQueued === 'next-frame') {
       return;
     }
 
     if(priority === 'next-frame') {
       // cancel low priority request if we get a high priority one
-      if(this._renderQueued === 'low-priority') {
-        clearTimeout(this._renderQueueTimeout);
+      if(this.#renderQueued === 'low-priority') {
+        clearTimeout(this.#renderQueueTimeout);
       }
 
       // request render in next animation frame
-      this._renderQueueFrame = requestAnimationFrame(() => this.render());
+      this.#renderQueueFrame = requestAnimationFrame(() => {
+        this.#renderQueueFrame = undefined;
+        this.render()
+      });
     } else {
       // render in 80ms (5 frames at ~60fps), so we can collect some more queueRenders until then (for example from image loading promises resolving)
-      this._renderQueueTimeout = setTimeout(() => this.render(), 80);
+      this.#renderQueueTimeout = setTimeout(() => {
+        this.#renderQueueTimeout = undefined;
+        this.render()
+      }, 80);
     }
 
     // store that render is already queued so we don't queue twice
-    this._renderQueued = priority;
+    this.#renderQueued = priority;
   }
 
   private render() {
     // we are doing it, remove queue status
-    this._renderQueued = false;
+    this.#renderQueued = false;
 
     // and cancel pending renders
-    cancelAnimationFrame(this._renderQueueFrame);
-    clearTimeout(this._renderQueueTimeout);
+    this.#renderQueueFrame && cancelAnimationFrame(this.#renderQueueFrame);
+    this.#renderQueueTimeout && clearTimeout(this.#renderQueueTimeout);
 
     // get context from canvas to draw to
     const ctx = this.canvas.getContext('2d');
