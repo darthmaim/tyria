@@ -87,12 +87,12 @@ export class TileLayer implements Layer {
     const bufferHeight = (tileBottomRight[1] - tileTopLeft[1] + 1) * tileSize;
 
     // grow the buffer if it is not large enough
-    // if it exceeds the required size by 2.2, shrink it to save some memory
-    // 2.2 was chosen because it is often twice the size when switching to the next higher zoom level, and we don't want to resize then already
-    if(buffer.width < bufferWidth || buffer.height < bufferHeight || buffer.width > bufferWidth * 2.2 || buffer.height > bufferHeight * 2.2) {
+    // or shrink if it is way too large
+    if(buffer.width < bufferWidth || buffer.height < bufferHeight || buffer.width > bufferWidth * 4 || buffer.height > bufferHeight * 4) {
       performance.mark('tile-layer-buffer-size-changed');
-      buffer.width = bufferWidth;
-      buffer.height = bufferHeight;
+      // make the buffer twice the size required, so that we can still fit all tiles in case the zoom level increases (= tile count doubles) next frame
+      buffer.width = bufferWidth * 2;
+      buffer.height = bufferHeight * 2;
     }
 
     // get buffer context to draw to
@@ -204,7 +204,8 @@ export class TileLayer implements Layer {
     const {
       tileTopLeft,
       tileBottomRight,
-      zoom
+      zoom,
+      tileSize
     } = this.getTiles(context);
 
     const size = subtract(tileBottomRight, add(tileTopLeft, 1))
@@ -218,6 +219,19 @@ export class TileLayer implements Layer {
         const src = this.options.source(x, y, zoom);
         context.getImage(src, { priority: 3 - distance, preload: true });
       }
+    }
+
+    // presize buffer
+    // get buffer and and calculate required size
+    const buffer = this.frameBuffer;
+    const bufferWidth = (tileBottomRight[0] - tileTopLeft[0] + 1) * tileSize;
+    const bufferHeight = (tileBottomRight[1] - tileTopLeft[1] + 1) * tileSize;
+
+    // make sure the buffer is at least twice the size required for the end state
+    if(buffer.width < bufferWidth * 2 || buffer.height < bufferHeight * 2) {
+      performance.mark('tile-layer-buffer-size-changed');
+      buffer.width = bufferWidth * 2;
+      buffer.height = bufferHeight * 2;
     }
   }
 
