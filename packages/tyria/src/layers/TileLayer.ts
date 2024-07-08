@@ -96,7 +96,7 @@ export class TileLayer implements Layer {
     }
 
     // get buffer context to draw to
-    const bufferCtx = buffer.getContext('2d')!;
+    const bufferCtx = buffer.getContext('2d', { alpha: false })!;
 
     // TODO:
     // if the zoom level did not change we can reuse the previous buffer
@@ -236,7 +236,7 @@ export class TileLayer implements Layer {
   }
 
   preloadImages(images: ImageBitmap[]) {
-    const bufferCtx = this.frameBuffer.getContext('2d')!;
+    const bufferCtx = this.frameBuffer.getContext('2d', { alpha: false })!;
 
     for(let i = 0; i < images.length; i++) {
       bufferCtx.drawImage(images[i], 0, 0);

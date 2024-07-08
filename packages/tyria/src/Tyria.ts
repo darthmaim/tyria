@@ -117,7 +117,7 @@ export class Tyria {
     this.#renderQueueTimeout && clearTimeout(this.#renderQueueTimeout);
 
     // get context from canvas to draw to
-    const ctx = this.canvas.getContext('2d');
+    const ctx = this.canvas.getContext('2d', { alpha: false });
 
     if(!ctx) {
       throw new Error('Could not get canvas context');
