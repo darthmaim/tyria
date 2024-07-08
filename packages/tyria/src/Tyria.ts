@@ -247,6 +247,9 @@ export class Tyria {
     let center = view.center ?? current.center;
     let zoom = view.zoom ?? current.zoom;
 
+    // get dpr to correctly calculate viewport size
+    const dpr = window.devicePixelRatio ?? 1;
+
     // make sure the area is completely visible in the viewport
     // TODO: handle passing contain + center?
     if(view.contain) {
@@ -255,7 +258,7 @@ export class Tyria {
       const aspectRatio = size[0] / size[1];
 
       // get size and aspect ratio of the viewport
-      const viewportSizePx = [this.canvas.width, this.canvas.height];
+      const viewportSizePx = [this.canvas.width / dpr, this.canvas.height / dpr];
       const viewportAspectRatio = viewportSizePx[0] / viewportSizePx[1];
 
       // if the area aspect ratio is larger than the viewport aspect ratio the x-axis is the one we have to fit inside the viewport, otherwise its the y-axis
@@ -267,7 +270,7 @@ export class Tyria {
 
       // if a zoom level is passed which is zoomed out enough to fit the area, we don't need to do anything
       // otherwise we set the zoom to the required zoom to contain the area, ignoring the passed zoom
-      if(!view.zoom || view.zoom > requiredZoom) {
+      if(view.zoom === undefined || view.zoom > requiredZoom) {
         zoom = requiredZoom;
       }
 
@@ -286,7 +289,7 @@ export class Tyria {
       const aspectRatio = size[0] / size[1];
 
       // get size and aspect ratio of the viewport
-      const viewportSizePx = [this.canvas.width, this.canvas.height];
+      const viewportSizePx = [this.canvas.width / dpr, this.canvas.height / dpr];
       const viewportAspectRatio = viewportSizePx[0] / viewportSizePx[1];
 
       // if the aspect ratio is larger than the viewport aspect ratio the y axis is the one we have to match to the viewport, otherwise its the x axis
