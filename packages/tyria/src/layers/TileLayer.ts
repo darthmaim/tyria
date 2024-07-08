@@ -224,8 +224,6 @@ export class TileLayer implements Layer {
   preloadImages(images: ImageBitmap[]) {
     const bufferCtx = this.frameBuffer.getContext('2d')!;
 
-    console.log('preload', images.length);
-
     for(let i = 0; i < images.length; i++) {
       bufferCtx.drawImage(images[i], 0, 0);
     }
