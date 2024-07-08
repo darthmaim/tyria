@@ -94,13 +94,13 @@ export class Tyria {
       // request render in next animation frame
       this.#renderQueueFrame = requestAnimationFrame(() => {
         this.#renderQueueFrame = undefined;
-        this.render()
+        this.render();
       });
     } else {
       // render in 80ms (5 frames at ~60fps), so we can collect some more queueRenders until then (for example from image loading promises resolving)
       this.#renderQueueTimeout = setTimeout(() => {
         this.#renderQueueTimeout = undefined;
-        this.render()
+        this.render();
       }, 80);
     }
 
@@ -113,8 +113,14 @@ export class Tyria {
     this.#renderQueued = false;
 
     // and cancel pending renders
-    this.#renderQueueFrame && cancelAnimationFrame(this.#renderQueueFrame);
-    this.#renderQueueTimeout && clearTimeout(this.#renderQueueTimeout);
+    if(this.#renderQueueFrame !== undefined) {
+      cancelAnimationFrame(this.#renderQueueFrame);
+      this.#renderQueueFrame = undefined;
+    }
+    if(this.#renderQueueTimeout !== undefined) {
+      clearTimeout(this.#renderQueueTimeout);
+      this.#renderQueueTimeout = undefined;
+    }
 
     // get context from canvas to draw to
     const ctx = this.canvas.getContext('2d', { alpha: false });
@@ -345,7 +351,10 @@ export class Tyria {
     this.view = this.resolveView(view);
 
     // cancel any in progress easing
-    this.currentEase = undefined;
+    if(this.currentEase) {
+      this.currentEase = undefined;
+      this.#renderQueued = false;
+    }
 
     // render the changes
     this.queueRender();
@@ -446,6 +455,7 @@ export class Tyria {
     // otherwise unset the current one
     if(progress < 1) {
       requestAnimationFrame(this.easeTick)
+      this.#renderQueued = 'next-frame';
     } else {
       this.currentEase = undefined;
     }
