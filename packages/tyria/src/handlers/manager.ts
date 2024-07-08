@@ -18,10 +18,10 @@ export class HandlerManager {
     this.addHandler('pan', new PanHandler(map));
 
     // register events
-    map.canvas.addEventListener('wheel', this.createEventHandler('wheel'));
-    map.canvas.addEventListener('pointerdown', this.createEventHandler('pointerdown'));
-    map.canvas.addEventListener('pointerup', this.createEventHandler('pointerup'));
-    map.canvas.addEventListener('pointermove', this.createEventHandler('pointermove'));
+    map.canvas.addEventListener('wheel', this.createEventHandler('wheel'), { passive: true });
+    map.canvas.addEventListener('pointerdown', this.createEventHandler('pointerdown'), { passive: true });
+    map.canvas.addEventListener('pointerup', this.createEventHandler('pointerup'), { passive: true });
+    map.canvas.addEventListener('pointermove', this.createEventHandler('pointermove'), { passive: true });
   }
 
   private createEventHandler<T extends SupportedEvents, EventType extends HTMLElementEventMap[T]>(type: T) {

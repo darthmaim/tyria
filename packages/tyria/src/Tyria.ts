@@ -12,7 +12,7 @@ export class Tyria {
     center: [0, 0],
     zoom: 1
   }
-  layers: Layer[] = [];
+  layers: { id: number, layer: Layer }[] = [];
   debug = false
   debugLastViewOptions?: ViewOptions;
 
@@ -117,6 +117,9 @@ export class Tyria {
       throw new Error('Could not get canvas context');
     }
 
+    // preload images
+    this.#preloadImages();
+
     performance.mark('render-start', { detail: { view: this.view }});
 
     // calculate the global transform of the map
@@ -132,7 +135,7 @@ export class Tyria {
     const transform = new DOMMatrix([dpr, 0, 0, dpr, translateX * dpr, translateY * dpr]);
 
     // prepare context that is passed to layers
-    const renderContext: LayerRenderContext = {
+    const renderContext: Omit<LayerRenderContext, 'getImage'> = {
       context: ctx,
       state: {
         center: this.view.center,
@@ -144,7 +147,6 @@ export class Tyria {
       },
       project: this.project.bind(this),
       unproject: this.unproject.bind(this),
-      getImage: (src, options) => this.imageManager.get(src, options),
     }
 
     // fill the whole canvas with background
@@ -155,12 +157,14 @@ export class Tyria {
     ctx.setTransform(transform);
 
     // render layers
-    for(const layer of this.layers) {
+    for(const { id, layer } of this.layers) {
+      const getImage = this.#createGetImageForLayer(id);
+
       // store the current state, so that we can reset it after the layer was rendered
       ctx.save();
 
       // actually render the layer
-      layer.render(renderContext);
+      layer.render({ ...renderContext, getImage });
 
       // restore the context state so that nothing bleeds into the next draw calls
       ctx.restore();
@@ -216,9 +220,12 @@ export class Tyria {
     performance.measure('render', 'render-start', 'render-end');
   }
 
+  #nextLayerId = 0;
+
   /** Add an additional layer to the map */
   addLayer(layer: Layer) {
-    this.layers.push(layer);
+    const id = this.#nextLayerId++;
+    this.layers.push({ id, layer });
     this.queueRender();
   }
 
@@ -387,7 +394,14 @@ export class Tyria {
 
       // we are in an animationFrame already, so we can just immediately render (setView only queued a render next frame)
       this.render();
+
+      if(progress === 1) {
+        performance.mark('easeTo-end');
+        performance.measure('easeTo', 'easeTo-start', 'easeTo-end');
+      }
     }
+
+    performance.mark('easeTo-start');
 
     if(duration === 0) {
       // if the duration of the transition is 0 we just call the end frame
@@ -456,10 +470,9 @@ export class Tyria {
     const target = this.resolveView(view);
 
     const dpr = window.devicePixelRatio || 1;
-    const preloadContext: LayerPreloadContext = {
+    const preloadContext: Omit<LayerPreloadContext, 'getImage'> = {
       project: (point: Point) => this.project(point, target.zoom),
       unproject: (point: Point) => this.project(point, target.zoom),
-      getImage: (src, options) => this.imageManager.get(src, options),
       state: {
         center: target.center,
         zoom: target.zoom,
@@ -470,10 +483,54 @@ export class Tyria {
       }
     };
 
-    for(const layer of this.layers) {
-      layer.preload?.(preloadContext);
+    for(const { id: layerId, layer } of this.layers) {
+      const getImage = this.#createGetImageForLayer(layerId);
+      layer.preload?.({ ...preloadContext, getImage });
     }
 
     this.imageManager.requestQueuedImages();
+  }
+
+
+  #preloadImageRegistrations: Map<string, number[]> = new Map();
+  #preloadImages() {
+    // load recently loaded images to canvas
+    const recentlyLoadedImages = this.imageManager.getPreloaded();
+    if(recentlyLoadedImages.length > 0) {
+      performance.mark('preload-images-start');
+
+      for(const { id: layerId, layer } of this.layers) {
+        if(layer.preloadImages) {
+          const imagesToPreloadForThisLayer = recentlyLoadedImages.filter(({ src }) => this.#preloadImageRegistrations.get(src)?.includes(layerId)).map(({ image }) => image);
+
+          if(imagesToPreloadForThisLayer.length > 0) {
+            layer.preloadImages(imagesToPreloadForThisLayer);
+          }
+        }
+      }
+
+      for(const { src } of recentlyLoadedImages) {
+        this.#preloadImageRegistrations.delete(src);
+      }
+
+      performance.mark('preload-images-end');
+      performance.measure('preload-images', 'preload-images-start', 'preload-images-end');
+    }
+  }
+
+  #createGetImageForLayer(layerId: number): LayerRenderContext['getImage'] {
+    return (src, options) => {
+      const image = this.imageManager.get(src, options);
+
+      if(!image && options?.preload) {
+        if(this.#preloadImageRegistrations.has(src)) {
+          this.#preloadImageRegistrations.get(src)!.push(layerId);
+        } else {
+          this.#preloadImageRegistrations.set(src, [layerId]);
+        }
+      }
+
+      return image;
+    }
   }
 }

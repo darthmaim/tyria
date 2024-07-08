@@ -1,8 +1,10 @@
+import { ImageGetOptions } from "./image-manager";
 import { Point } from "./types";
 
 export interface Layer {
-  render(context: LayerRenderContext)
+  render(context: LayerRenderContext);
   preload?(context: LayerPreloadContext);
+  preloadImages?(images: ImageBitmap[]);
 }
 
 export interface LayerRenderContext {
@@ -28,7 +30,7 @@ export interface LayerRenderContext {
   },
   project: (coordinate: Point) => Point,
   unproject: (point: Point) => Point,
-  getImage: (src: string, options?: { priority?: number, cacheOnly?: boolean }) => ImageBitmap | undefined,
+  getImage: (src: string, options?: ImageGetOptions) => ImageBitmap | undefined,
 }
 
 export type LayerPreloadContext = Omit<LayerRenderContext, 'context'>;

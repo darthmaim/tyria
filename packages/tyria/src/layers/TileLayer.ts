@@ -67,6 +67,8 @@ export class TileLayer implements Layer {
   }
 
   render({ context, state, project, getImage }: LayerRenderContext) {
+    performance.mark('tile-layer-render-start');
+
     // get tiles in viewport
     const {
       tileSize,
@@ -88,6 +90,7 @@ export class TileLayer implements Layer {
     // if it exceeds the required size by 2.2, shrink it to save some memory
     // 2.2 was chosen because it is often twice the size when switching to the next higher zoom level, and we don't want to resize then already
     if(buffer.width < bufferWidth || buffer.height < bufferHeight || buffer.width > bufferWidth * 2.2 || buffer.height > bufferHeight * 2.2) {
+      performance.mark('tile-layer-buffer-size-changed');
       buffer.width = bufferWidth;
       buffer.height = bufferHeight;
     }
@@ -160,6 +163,9 @@ export class TileLayer implements Layer {
 
       context.restore();
     }
+
+    performance.mark('tile-layer-render-end');
+    performance.measure('tile-layer-render', 'tile-layer-render-start', 'tile-layer-render-end');
   }
 
   private getFallbackTile(getImage: LayerRenderContext['getImage'], x, y, zoom, scale = 1): { x: number, y: number, scale, image: ImageBitmap | HTMLImageElement } | undefined {
@@ -210,8 +216,18 @@ export class TileLayer implements Layer {
         const distance = (Math.abs(distanceFromCenter[0]) + Math.abs(distanceFromCenter[1])) / 2;
 
         const src = this.options.source(x, y, zoom);
-        context.getImage(src, { priority: 3 - distance });
+        context.getImage(src, { priority: 3 - distance, preload: true });
       }
+    }
+  }
+
+  preloadImages(images: ImageBitmap[]) {
+    const bufferCtx = this.frameBuffer.getContext('2d')!;
+
+    console.log('preload', images.length);
+
+    for(let i = 0; i < images.length; i++) {
+      bufferCtx.drawImage(images[i], 0, 0);
     }
   }
 }
