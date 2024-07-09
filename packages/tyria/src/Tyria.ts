@@ -17,7 +17,7 @@ export class Tyria {
   debug = false
   debugLastViewOptions?: ViewOptions;
 
-  renderQueue = new RenderQueue(this.render.bind(this));
+  renderQueue = new RenderQueue(this.#render.bind(this));
 
   handlers: HandlerManager;
   imageManager: ImageManager;
@@ -83,7 +83,7 @@ export class Tyria {
     this.renderQueue.queue(priority);
   }
 
-  private render() {
+  #render() {
     // we are doing it, cancel any pending renders
     this.renderQueue.cancel();
 
