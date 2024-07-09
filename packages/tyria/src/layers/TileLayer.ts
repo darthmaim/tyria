@@ -66,7 +66,7 @@ export class TileLayer implements Layer {
     }
   }
 
-  render({ context, state, project, getImage }: LayerRenderContext) {
+  render({ context, state, project, getImage, reason }: LayerRenderContext) {
     performance.mark('tile-layer-render-start');
 
     // get tiles in viewport
@@ -114,7 +114,7 @@ export class TileLayer implements Layer {
 
         // try to get the tile from the cache
         const src = this.options.source(x, y, zoom);
-        const tile = getImage(src, { priority: 2 - distance });
+        const tile = getImage(src, { priority: 2 - distance, cacheOnly: reason === 'ease' });
 
         if(tile) {
           // draw tile

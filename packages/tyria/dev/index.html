@@ -74,6 +74,7 @@
     <button id="lionsarch">Lion's Arch</button>
     <button id="ascalon">Ascalon</button>
     <button id="horn">Horn of Maguuma</button>
+    <button id="cantha">Cantha</button>
   </div>
   <script type="module">
     import { Tyria, TileLayer } from './dist/index.mjs';
@@ -98,6 +99,7 @@
     document.getElementById('lionsarch').addEventListener('click', () => map.easeTo({ contain: [[48130, 30720], [50430, 32250]] }))
     document.getElementById('ascalon').addEventListener('click', () => map.easeTo({ contain: [[56682, 24700], [64500, 35800]], zoom: 3 }))
     document.getElementById('horn').addEventListener('click', () => map.easeTo({ contain: [[19328, 19048], [27296, 24800]] }))
+    document.getElementById('cantha').addEventListener('click', () => map.easeTo({ contain: [[20576, 97840], [39056, 106256]] }))
 
     window.map = map;
   </script>

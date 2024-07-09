@@ -1,4 +1,5 @@
 import { ImageGetOptions } from "./image-manager";
+import { RenderReason } from "./render-queue";
 import { Point } from "./types";
 
 export interface Layer {
@@ -9,6 +10,7 @@ export interface Layer {
 
 export interface LayerRenderContext {
   context: CanvasRenderingContext2D,
+  reason: RenderReason,
   state: {
     /** center of the map in map coordinates */
     center: Point,
@@ -33,4 +35,4 @@ export interface LayerRenderContext {
   getImage: (src: string, options?: ImageGetOptions) => ImageBitmap | undefined,
 }
 
-export type LayerPreloadContext = Omit<LayerRenderContext, 'context'>;
+export type LayerPreloadContext = Omit<LayerRenderContext, 'context' | 'reason'>;

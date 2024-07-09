@@ -2,8 +2,8 @@ import { HandlerManager } from './handlers/manager';
 import { ImageManager } from './image-manager';
 import { Layer, LayerPreloadContext, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
-import { RenderQueue, RenderQueuePriority } from './render-queue';
-import { Point, View, ViewOptions } from './types';
+import { RenderQueue, RenderQueuePriority, RenderReason } from './render-queue';
+import { Bounds, Point, View, ViewOptions } from './types';
 import { add, clamp, easeInOutCubic, multiply, subtract } from './util';
 
 export class Tyria {
@@ -79,11 +79,11 @@ export class Tyria {
     return [x * nativeZoomScale / zoomScale, y * nativeZoomScale / zoomScale];
   }
 
-  queueRender(priority?: RenderQueuePriority) {
-    this.renderQueue.queue(priority);
+  queueRender(priority?: RenderQueuePriority, reason?: RenderReason) {
+    this.renderQueue.queue(priority, reason);
   }
 
-  #render() {
+  #render(reason: RenderReason) {
     // we are doing it, cancel any pending renders
     this.renderQueue.cancel();
 
@@ -99,6 +99,8 @@ export class Tyria {
 
     // preload images
     this.#preloadImages();
+
+    console.log('render', reason);
 
     performance.mark('render-start', { detail: { view: this.view }});
 
@@ -125,6 +127,7 @@ export class Tyria {
         dpr,
         debug: this.debug,
       },
+      reason,
       project: this.project.bind(this),
       unproject: this.unproject.bind(this),
     }
@@ -311,6 +314,18 @@ export class Tyria {
     return { center, zoom };
   }
 
+  /** Gets the area visible in the viewport */
+  #getViewportArea(view: View) {
+    const dpr = window.devicePixelRatio ?? 1;
+    const viewportHalfSizePx: Point = [this.canvas.width / dpr / 2, this.canvas.height / dpr / 2];
+    const centerPx = this.project(view.center);
+
+    const topLeft = this.unproject(subtract(centerPx, viewportHalfSizePx));
+    const bottomRight = this.unproject(add(centerPx, viewportHalfSizePx));
+
+    return [topLeft, bottomRight];
+  }
+
   /** Instantly jumps to the provided view */
   jumpTo(view: ViewOptions) {
     this.debugLastViewOptions = view;
@@ -343,6 +358,14 @@ export class Tyria {
 
     // preload target view
     this.preload(target);
+
+    const startArea = this.#getViewportArea(start);
+    const targetArea = this.#getViewportArea(target);
+    const combinedArea: Bounds = [
+      [Math.min(startArea[0][0], targetArea[0][0]), Math.min(startArea[0][1], targetArea[0][1])] as Point,
+      [Math.max(startArea[1][0], targetArea[1][0]), Math.max(startArea[1][1], targetArea[1][1])] as Point
+    ];
+    this.preload(this.resolveView({ contain: combinedArea }));
 
     // if we are not moving, don't move
     if(target.zoom === start.zoom && target.center[0] === start.center[0] && target.center[1] === start.center[1]) {
@@ -393,7 +416,7 @@ export class Tyria {
       this.currentEase = { frame, duration, start: performance.now() }
     }
 
-    this.queueRender();
+    this.queueRender('next-frame', 'ease');
   }
 
   /** The currently running easing */
@@ -419,7 +442,7 @@ export class Tyria {
     // if the animation is not yet finished, queue another frame,
     // otherwise unset the current one
     if(progress < 1) {
-      this.queueRender();
+      this.queueRender('next-frame', 'ease');
     } else {
       this.currentEase = undefined;
     }
