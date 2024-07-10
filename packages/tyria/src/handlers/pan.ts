@@ -1,18 +1,20 @@
 import { Point } from "../types";
 import { add, subtract } from "../util";
-import { Handler, HandlerResponse } from "./handler";
+import { Handler, HandlerResponse, WrappedEvent } from "./handler";
 
 export class PanHandler extends Handler {
   #isDragging = false;
   #lastPoint: Point = [0, 0];
 
-  pointerdown(event: PointerEvent): HandlerResponse {
-    this.#isDragging = true;
-    this.#lastPoint = [event.clientX, event.clientY];
-    this.map.canvas.style.cursor = 'grabbing';
+  pointerdown(event: WrappedEvent<PointerEvent>): HandlerResponse {
+    if(event.nativeEvent.button === 0) {
+      this.#isDragging = true;
+      this.#lastPoint = [event.nativeEvent.clientX, event.nativeEvent.clientY];
+      this.map.canvas.style.cursor = 'grabbing';
+    }
   }
 
-  pointerup(event: PointerEvent): HandlerResponse {
+  windowPointerup(event: WrappedEvent<PointerEvent>): HandlerResponse {
     const wasDragging = this.#isDragging;
 
     this.#isDragging = false;
@@ -27,13 +29,13 @@ export class PanHandler extends Handler {
     }
   }
 
-  pointermove(event: PointerEvent): HandlerResponse {
+  windowPointermove(event: WrappedEvent<PointerEvent>): HandlerResponse {
     // we only care about the move while we are panning
     if(!this.#isDragging) {
       return;
     }
 
-    const point: Point = [event.clientX, event.clientY];
+    const point: Point = [event.nativeEvent.clientX, event.nativeEvent.clientY];
 
     // get the delta the pointer was moved by and unproject to coordinate space
     const delta = this.map.unproject(subtract(this.#lastPoint, point));

@@ -1,11 +1,11 @@
-import { Handler, HandlerResponse } from "./handler";
+import { Handler, HandlerResponse, WrappedEvent } from "./handler";
 
 export class ScrollZoomHandler extends Handler {
-  wheel(event: WheelEvent): HandlerResponse {
-    const delta = 0.5 * Math.sign(event.deltaY);
+  wheel(event: WrappedEvent<WheelEvent>): HandlerResponse {
+    const delta = 0.5 * Math.sign(event.nativeEvent.deltaY);
 
     this.map.easeTo({
-      around: this.map.canvasPixelToMap([event.offsetX, event.offsetY]),
+      around: event.coordinate,
       zoom: this.map.view.zoom - delta
     }, {
       duration: 100,
