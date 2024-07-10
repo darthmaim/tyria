@@ -1,6 +1,6 @@
 import { ImageGetOptions } from "./image-manager";
 import { RenderReason } from "./render-queue";
-import { Point } from "./types";
+import { Bounds, Point } from "./types";
 
 export interface Layer {
   render(context: LayerRenderContext);
@@ -23,6 +23,9 @@ export interface LayerRenderContext {
 
     /** height of the map in px */
     height: number,
+
+    /** The visible area in the viewport in map coordinates */
+    area: Bounds,
 
     /** The device pixel ratio used to render */
     dpr: number,

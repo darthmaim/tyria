@@ -122,6 +122,7 @@ export class Tyria {
         zoom: this.view.zoom,
         width,
         height,
+        area: this.#getViewportArea(this.view),
         dpr,
         debug: this.debug,
       },
@@ -313,7 +314,7 @@ export class Tyria {
   }
 
   /** Gets the area visible in the viewport */
-  #getViewportArea(view: View) {
+  #getViewportArea(view: View): Bounds {
     const dpr = window.devicePixelRatio ?? 1;
     const viewportHalfSizePx: Point = [this.canvas.width / dpr / 2, this.canvas.height / dpr / 2];
     const centerPx = this.project(view.center);
@@ -482,6 +483,7 @@ export class Tyria {
         zoom: target.zoom,
         width: this.canvas.width / dpr,
         height: this.canvas.height / dpr,
+        area: this.#getViewportArea(target),
         dpr: dpr,
         debug: this.debug,
       }
