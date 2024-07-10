@@ -100,8 +100,6 @@ export class Tyria {
     // preload images
     this.#preloadImages();
 
-    console.log('render', reason);
-
     performance.mark('render-start', { detail: { view: this.view }});
 
     // calculate the global transform of the map
