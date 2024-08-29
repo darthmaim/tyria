@@ -1,6 +1,7 @@
 import { Tyria } from "../Tyria";
 import { Handler, NativeEventNameFromSupportedEvent, WrappedEvent } from "./handler";
 import { Inertia } from "./inertia";
+import { InteractionHandler } from "./interaction";
 import { PanHandler } from "./pan";
 import { ScrollZoomHandler } from "./scroll_zoom";
 
@@ -16,6 +17,7 @@ export class HandlerManager {
     // init default handlers
     this.addHandler('scrollZoom', new ScrollZoomHandler(map));
     this.addHandler('pan', new PanHandler(map));
+    this.addHandler('interaction', new InteractionHandler(map));
 
     // register events
     map.canvas.addEventListener('wheel', this.#createEventHandler('wheel'), { passive: true });
@@ -63,7 +65,7 @@ export class HandlerManager {
 
   #wrapEvent<E extends Event>(nativeEvent: E): WrappedEvent<E> {
     const coordinate = nativeEvent instanceof MouseEvent
-      ? this.map.canvasPixelToMap([nativeEvent.offsetX, nativeEvent.offsetY])
+      ? this.map.canvasPixelToMapCoordinate([nativeEvent.offsetX, nativeEvent.offsetY])
       : undefined;
 
     return {

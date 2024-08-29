@@ -18,7 +18,9 @@ export type EventHandler = {
 
 export interface WrappedEvent<E extends Event> {
   nativeEvent: E;
-  coordinate: E extends MouseEvent ? Point : undefined;
+
+  /** position in map coordinates */
+  coordinate: E extends MouseEvent ? Point : never;
 }
 
 export abstract class Handler implements EventHandler {

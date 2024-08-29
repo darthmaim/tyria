@@ -1,6 +1,6 @@
 import { HandlerManager } from './handlers/manager';
 import { ImageManager } from './image-manager';
-import { Layer, LayerPreloadContext, LayerRenderContext } from './layer';
+import { Layer, LayerHitTestContext, LayerPreloadContext, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
 import { RenderQueue, RenderQueuePriority, RenderReason } from './render-queue';
 import { Bounds, Point, View, ViewOptions } from './types';
@@ -116,6 +116,7 @@ export class Tyria {
 
     // prepare context that is passed to layers
     const renderContext: Omit<LayerRenderContext, 'getImage'> = {
+      map: this,
       context: ctx,
       state: {
         center: this.view.center,
@@ -453,7 +454,7 @@ export class Tyria {
   }
 
   /** Convert a pixel in the canvas (for example offsetX/offsetY from an event) to the corresponding map coordinates at that point */
-  canvasPixelToMap([x, y]: Point) {
+  canvasPixelToMapCoordinate([x, y]: Point) {
     const dpr = window.devicePixelRatio || 1;
 
     const halfWidth = this.canvas.width / dpr / 2;
@@ -462,6 +463,22 @@ export class Tyria {
     const offset: Point = this.unproject([-x + halfWidth, -y + halfHeight]);
 
     return subtract(this.view.center, offset);
+  }
+
+  /** Convert a map coordinate to canvas px */
+  mapCoordinateToCanvasPixel(coordinate: Point) {
+    const dpr = window.devicePixelRatio || 1;
+
+    const viewportHalfSizePx: Point = [
+      this.canvas.width / dpr / 2,
+      this.canvas.height / dpr / 2
+    ];
+
+    const pointPx = this.project(coordinate);
+    const centerPx = this.project(this.view.center);
+    const topLeftPx = subtract(centerPx, viewportHalfSizePx);
+
+    return subtract(pointPx, topLeftPx);
   }
 
   /** Enable or disable the debug overlay of the map */
@@ -476,6 +493,7 @@ export class Tyria {
 
     const dpr = window.devicePixelRatio || 1;
     const preloadContext: Omit<LayerPreloadContext, 'getImage'> = {
+      map: this,
       project: (point: Point) => this.project(point, target.zoom),
       unproject: (point: Point) => this.project(point, target.zoom),
       state: {
@@ -537,6 +555,35 @@ export class Tyria {
       }
 
       return image;
+    }
+  }
+
+  hitTest(point: Point): undefined | { layer: Layer, markerId: string } {
+    const dpr = window.devicePixelRatio || 1;
+    const width = this.canvas.width / dpr;
+    const height = this.canvas.height / dpr;
+
+    const hitTestContext: LayerHitTestContext = {
+      map: this,
+      state: {
+        center: this.view.center,
+        zoom: this.view.zoom,
+        width,
+        height,
+        area: this.#getViewportArea(this.view),
+        dpr,
+        debug: this.debug,
+      },
+      project: this.project.bind(this),
+      unproject: this.unproject.bind(this),
+    }
+
+    for(const { layer } of this.layers) {
+      const result = layer.hitTest?.(point, hitTestContext);
+
+      if(result !== undefined) {
+        return { layer, ...result };
+      }
     }
   }
 }
