@@ -22,7 +22,7 @@ export class Tyria {
   handlers: HandlerManager;
   imageManager: ImageManager;
 
-  constructor(private container: HTMLElement, public readonly options: TyriaMapOptions) {
+  constructor(public container: HTMLElement, public readonly options: TyriaMapOptions) {
     // create the canvas
     this.createCanvas();
 

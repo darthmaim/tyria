@@ -77,7 +77,7 @@
     <button id="cantha">Cantha</button>
   </div>
   <script type="module">
-    import { Tyria, TileLayer, MarkerLayer } from './dist/index.mjs';
+    import { Tyria, TileLayer, MarkerLayer, HtmlMarkerLayer } from './dist/index.mjs';
 
     const map = new Tyria(document.getElementById('map'), {
       backgroundColor: '#051626',
@@ -91,18 +91,26 @@
       bounds: [[0, 0], [81920, 114688]],
     }));
 
-    const markers = new MarkerLayer({
-      icon: 'https://render.guildwars2.com/file/32633AF8ADEA696A1EF56D3AE32D617B10D3AC57/157353.png',
-      iconSize: [32, 32],
-      minZoom: 3,
+    const markers = new HtmlMarkerLayer(map, {
+      // icon: 'https://render.guildwars2.com/file/32633AF8ADEA696A1EF56D3AE32D617B10D3AC57/157353.png',
+      // iconSize: [32, 32],
+      // minZoom: 3,
     });
     map.addLayer(markers)
 
-    fetch('https://api.guildwars2.com/v2/continents/1/floors/1').then((r) => r.json()).then((data) => {
+    fetch('https://api.guildwars2.com/v2/continents/1/floors/1?lang=en').then((r) => r.json()).then((data) => {
       const waypoints = Object.values(data.regions ?? []).flatMap((region) => Object.values(region.maps ?? []).flatMap((map) => Object.values(map.points_of_interest ?? []).filter((poi) => poi.type === 'waypoint')));
       markers.add(...waypoints.map((wp) => ({
         id: wp.id,
         position: wp.coord,
+        element: () => {
+          const img = document.createElement('img');
+          img.title = wp.name;
+          img.width = 32;
+          img.height = 32;
+          img.src = 'https://render.guildwars2.com/file/32633AF8ADEA696A1EF56D3AE32D617B10D3AC57/157353.png';
+          return img;
+        }
       })))
     });
     
