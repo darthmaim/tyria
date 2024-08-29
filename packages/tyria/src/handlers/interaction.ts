@@ -3,7 +3,7 @@ import { Point } from "../types";
 import { Handler, HandlerResponse, WrappedEvent } from "./handler";
 
 export class InteractionHandler extends Handler {
-  #hovering: false | { layer: Layer, markerId: string };
+  #hovering: undefined | { layer: Layer, markerId: string };
 
   pointermove(event: WrappedEvent<PointerEvent>): HandlerResponse {
     const at: Point = [event.nativeEvent.offsetX, event.nativeEvent.offsetY];
@@ -13,20 +13,18 @@ export class InteractionHandler extends Handler {
       x: at[0], y: at[1], target
     };
 
-    if(target && !this.#hovering) {
-      this.#hovering = target;
-      this.map.canvas.style.cursor = 'pointer';
+    const changedTarget = this.#hovering?.layer !== target?.layer || this.#hovering?.markerId !== target?.markerId;
 
-      this.map.dispatchEvent({ type: 'marker.over', map: this.map, ...target });
+    if(changedTarget && this.#hovering) {
+      this.map.canvas.style.cursor = 'grab';
+      this.map.dispatchEvent({ type: 'marker.leave', map: this.map, ...this.#hovering });
     }
 
-    if(!target && this.#hovering) {
-      const wasHovering = this.#hovering;
+    this.#hovering = target;
 
-      this.#hovering = false;
-      this.map.canvas.style.cursor = 'grab';
-
-      this.map.dispatchEvent({ type: 'marker.leave', map: this.map, ...wasHovering });
+    if(target && changedTarget) {
+      this.map.canvas.style.cursor = 'pointer';
+      this.map.dispatchEvent({ type: 'marker.over', map: this.map, ...target });
     }
   }
 }

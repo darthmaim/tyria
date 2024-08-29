@@ -70,7 +70,9 @@ export class MarkerLayer implements Layer {
   }
 
   hitTest(hit: Point, context: LayerHitTestContext): undefined | { markerId: string } {
-    const markersInViewport = this.#getMarkersInViewport(context.state);
+    // get markers in viewport and reverse the order,
+    // because they are rendered bottom-to-top, we want to hit-test top-to-bottom
+    const markersInViewport = this.#getMarkersInViewport(context.state).reverse();
 
     for(const marker of markersInViewport) {
       const position = context.map.mapCoordinateToCanvasPixel(marker.position);
