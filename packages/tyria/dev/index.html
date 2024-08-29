@@ -57,6 +57,22 @@
       display: flex;
       gap: 16px;
     }
+    #over {
+      position: absolute;
+      top: 16px;
+      background: #fff;
+      margin-left: 50%;
+      margin-right: -50%;
+      transform: translateX(-50%);
+      padding: 16px;
+      border-radius: 2px;
+      box-shadow: 0 0 4px rgb(0 0 0 / .5);
+      display: flex;
+      gap: 16px;
+    }
+    #over:empty {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -76,6 +92,7 @@
     <button id="horn">Horn of Maguuma</button>
     <button id="cantha">Cantha</button>
   </div>
+  <div id="over"></div>
   <script type="module">
     import { Tyria, TileLayer, MarkerLayer } from './dist/index.mjs';
 
@@ -108,6 +125,9 @@
     
     map.jumpTo({ center: [49432, 31440], zoom: 2.5 });
     map.easeTo({ zoom: 3 }, { duration: 2000, easing: (x) => 1 - Math.pow(1 - x, 3) });
+
+    map.addEventListener('marker.over', (e) => document.getElementById('over').innerText = e.markerId);
+    map.addEventListener('marker.leave', (e) => document.getElementById('over').innerText = '');
 
     document.getElementById('debug').addEventListener('change', (e) => map.setDebug(e.target.checked));
 

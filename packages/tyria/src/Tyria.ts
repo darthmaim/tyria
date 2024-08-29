@@ -1,3 +1,4 @@
+import { TyriaEventTarget } from './events';
 import { HandlerManager } from './handlers/manager';
 import { ImageManager } from './image-manager';
 import { Layer, LayerHitTestContext, LayerPreloadContext, LayerRenderContext } from './layer';
@@ -6,7 +7,7 @@ import { RenderQueue, RenderQueuePriority, RenderReason } from './render-queue';
 import { Bounds, Point, View, ViewOptions } from './types';
 import { add, clamp, easeInOutCubic, multiply, subtract } from './util';
 
-export class Tyria {
+export class Tyria extends TyriaEventTarget {
   canvas: HTMLCanvasElement;
 
   view: Readonly<View> = {
@@ -23,6 +24,8 @@ export class Tyria {
   imageManager: ImageManager;
 
   constructor(private container: HTMLElement, public readonly options: TyriaMapOptions) {
+    super();
+
     // create the canvas
     this.createCanvas();
 
