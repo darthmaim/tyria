@@ -16,7 +16,7 @@ export class InteractionHandler extends Handler {
     const changedTarget = this.#hovering?.layer !== target?.layer || this.#hovering?.markerId !== target?.markerId;
 
     if(changedTarget && this.#hovering) {
-      this.map.canvas.style.cursor = 'grab';
+      this.map.canvas.style.cursor = 'initial';
       this.map.dispatchEvent({ type: 'marker.leave', map: this.map, ...this.#hovering });
     }
 

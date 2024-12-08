@@ -45,6 +45,15 @@ export function divide(a: Point, b: Point | number): Point {
   ]
 }
 
+export function lengthSquared(delta: Point): number {
+  const squared = multiply(delta, delta);
+  return squared[0] + squared[1];
+}
+
+export function length(delta: Point): number {
+  return Math.sqrt(lengthSquared(delta));
+}
+
 export function easeInOutCubic(x: number) {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;;
 }
