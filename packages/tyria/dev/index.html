@@ -115,9 +115,12 @@
     });
     map.addLayer(markers)
 
+    const waypoints = new Map();
+
     fetch('https://api.guildwars2.com/v2/continents/1/floors/1').then((r) => r.json()).then((data) => {
-      const waypoints = Object.values(data.regions ?? []).flatMap((region) => Object.values(region.maps ?? []).flatMap((map) => Object.values(map.points_of_interest ?? []).filter((poi) => poi.type === 'waypoint')));
-      markers.add(...waypoints.map((wp) => ({
+      const wps = Object.values(data.regions ?? []).flatMap((region) => Object.values(region.maps ?? {}).flatMap((map) => Object.values(map.points_of_interest ?? {}).filter((poi) => poi.type === 'waypoint').map((poi) => ({ ...poi, map }))));
+      wps.forEach((wp) => waypoints.set(wp.id, wp));
+      markers.add(...wps.map((wp) => ({
         id: wp.id,
         position: wp.coord,
       })))
@@ -126,8 +129,13 @@
     map.jumpTo({ center: [49432, 31440], zoom: 2.5 });
     map.easeTo({ zoom: 3 }, { duration: 2000, easing: (x) => 1 - Math.pow(1 - x, 3) });
 
-    map.addEventListener('marker.over', (e) => document.getElementById('over').innerText = e.markerId);
+    map.addEventListener('marker.over', (e) => document.getElementById('over').innerText = waypoints.get(e.markerId).name);
     map.addEventListener('marker.leave', (e) => document.getElementById('over').innerText = '');
+    map.addEventListener('marker.click', (e) => {
+      const wp = waypoints.get(e.markerId);
+      console.log(wp);
+      map.easeTo({ contain: wp.map.continent_rect })
+    });
 
     document.getElementById('debug').addEventListener('change', (e) => map.setDebug(e.target.checked));
 

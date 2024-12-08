@@ -51,7 +51,7 @@ export class TyriaEventTarget {
       throw new Error('Unknown event type');
     }
 
-    console.log(event.type, event);
+    // console.log(event.type, event);
 
     for(const listener of this.#eventListeners[event.type as E]) {
       listener(event);

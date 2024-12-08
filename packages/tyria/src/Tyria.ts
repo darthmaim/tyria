@@ -359,6 +359,11 @@ export class Tyria extends TyriaEventTarget {
     const start = this.view;
     const target = this.resolveView(view);
 
+    // if we are not moving, don't move
+    if(target.zoom === start.zoom && target.center[0] === start.center[0] && target.center[1] === start.center[1]) {
+      return;
+    }
+
     // preload target view
     this.preload(target);
 
@@ -369,11 +374,6 @@ export class Tyria extends TyriaEventTarget {
       [Math.max(startArea[1][0], targetArea[1][0]), Math.max(startArea[1][1], targetArea[1][1])] as Point
     ];
     this.preload(this.resolveView({ contain: combinedArea }));
-
-    // if we are not moving, don't move
-    if(target.zoom === start.zoom && target.center[0] === start.center[0] && target.center[1] === start.center[1]) {
-      return;
-    }
 
     // calculate delta
     const deltaZoom = target.zoom - start.zoom;

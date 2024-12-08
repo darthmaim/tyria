@@ -27,4 +27,10 @@ export class InteractionHandler extends Handler {
       this.map.dispatchEvent({ type: 'marker.over', map: this.map, ...target });
     }
   }
+
+  pointerup(event: WrappedEvent<PointerEvent>): HandlerResponse {
+    if(this.#hovering) {
+      this.map.dispatchEvent({ type: 'marker.click', map: this.map, ...this.#hovering })
+    }
+  }
 }

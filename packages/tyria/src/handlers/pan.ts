@@ -3,14 +3,14 @@ import { add, subtract } from "../util";
 import { Handler, HandlerResponse, WrappedEvent } from "./handler";
 
 export class PanHandler extends Handler {
+  isPointerDown = false;
   #isDragging = false;
   #lastPoint: Point = [0, 0];
 
   pointerdown(event: WrappedEvent<PointerEvent>): HandlerResponse {
     if(event.nativeEvent.button === 0) {
-      this.#isDragging = true;
+      this.isPointerDown = true;
       this.#lastPoint = [event.nativeEvent.clientX, event.nativeEvent.clientY];
-      this.map.canvas.style.cursor = 'grabbing';
     }
   }
 
@@ -18,6 +18,7 @@ export class PanHandler extends Handler {
     const wasDragging = this.#isDragging;
 
     this.#isDragging = false;
+    this.isPointerDown = false;
 
     if(wasDragging) {
       this.map.canvas.style.cursor = 'grab';
@@ -31,8 +32,16 @@ export class PanHandler extends Handler {
 
   windowPointermove(event: WrappedEvent<PointerEvent>): HandlerResponse {
     // we only care about the move while we are panning
-    if(!this.#isDragging) {
+    if(!this.isPointerDown) {
       return;
+    }
+
+    // if the pointer is moving while it is down we are dragging
+    // this avoids registering "clicks" as drags
+    // TODO: add threshold to move before dragging?
+    if(!this.#isDragging) {
+      this.#isDragging = true;
+      this.map.canvas.style.cursor = 'grabbing';
     }
 
     const point: Point = [event.nativeEvent.clientX, event.nativeEvent.clientY];
