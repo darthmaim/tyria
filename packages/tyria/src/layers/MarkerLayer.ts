@@ -29,15 +29,13 @@ export class MarkerLayer implements Layer {
   }
 
   render(renderContext: LayerRenderContext) {
+    if(!this.#isVisible(renderContext)) {
+      return undefined;
+    }
+
     performance.mark('marker-layer-render-start');
 
-    const isVisible =
-      (!this.#options.maxZoom || this.#options.maxZoom >= renderContext.state.zoom) &&
-      (!this.#options.minZoom || this.#options.minZoom <= renderContext.state.zoom);
-
-    if(isVisible) {
-      this.#renderMarkers(renderContext);
-    }
+    this.#renderMarkers(renderContext);
 
     performance.mark('marker-layer-render-end');
     performance.measure('marker-layer-render', 'marker-layer-render-start', 'marker-layer-render-end')
@@ -70,6 +68,10 @@ export class MarkerLayer implements Layer {
   }
 
   hitTest(hit: Point, context: LayerHitTestContext): undefined | { markerId: string } {
+    if(!this.#isVisible(context)) {
+      return undefined;
+    }
+
     // get markers in viewport and reverse the order,
     // because they are rendered bottom-to-top, we want to hit-test top-to-bottom
     const markersInViewport = this.#getMarkersInViewport(context.state).reverse();
@@ -85,6 +87,14 @@ export class MarkerLayer implements Layer {
     }
 
     return undefined;
+  }
+
+  #isVisible(context: LayerRenderContext | LayerHitTestContext) {
+    const isVisible =
+      (!this.#options.maxZoom || this.#options.maxZoom >= context.state.zoom) &&
+      (!this.#options.minZoom || this.#options.minZoom <= context.state.zoom);
+
+    return isVisible;
   }
 }
 
