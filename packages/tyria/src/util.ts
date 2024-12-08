@@ -1,4 +1,4 @@
-import { Point } from "./types";
+import { Padding, Point } from "./types";
 
 export function clamp(value: number, min: number | undefined, max: number | undefined) {
   return (min !== undefined && value < min) ? min :
@@ -51,4 +51,20 @@ export function easeInOutCubic(x: number) {
 
 export function easeOutCubic(x: number): number {
   return 1 - Math.pow(1 - x, 3);
+}
+
+const emptyPadding: Padding = { top: 0, bottom: 0, left: 0, right: 0 };
+export function getPadding(padding: undefined | number | Partial<Padding>): Padding {
+  if(padding === undefined) {
+    return emptyPadding;
+  }
+
+  if(typeof padding === 'number') {
+    return { top: padding, bottom: padding, left: padding, right: padding };
+  }
+
+  return {
+    ...emptyPadding,
+    ...padding
+  };
 }

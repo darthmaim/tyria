@@ -5,7 +5,7 @@ import { Layer, LayerHitTestContext, LayerPreloadContext, LayerRenderContext } f
 import { TyriaMapOptions } from './options';
 import { RenderQueue, RenderQueuePriority, RenderReason } from './render-queue';
 import { Bounds, Point, View, ViewOptions } from './types';
-import { add, clamp, easeInOutCubic, multiply, subtract } from './util';
+import { add, clamp, easeInOutCubic, getPadding, multiply, subtract } from './util';
 
 export class Tyria extends TyriaEventTarget {
   canvas: HTMLCanvasElement;
@@ -185,6 +185,29 @@ export class Tyria extends TyriaEventTarget {
 
       ctx.resetTransform();
 
+      // render padding
+      if(this.options.padding && this.debugLastViewOptions?.contain) {
+        ctx.fillStyle = '#673AB788';
+        ctx.strokeStyle = '#673AB7';
+        ctx.lineWidth = 2 * dpr;
+
+        const padding = getPadding(this.options.padding);
+
+        if(padding.top) {
+          ctx.fillRect(padding.left * dpr, 0, (width - padding.left - padding.right) * dpr, padding.top * dpr);
+        }
+        if(padding.bottom) {
+          ctx.fillRect(padding.left * dpr, (height - padding.bottom) * dpr, (width - padding.left - padding.right) * dpr, height * dpr);
+        }
+        if(padding.left) {
+          ctx.fillRect(0, 0, padding.left * dpr, height * dpr);
+        }
+        if(padding.right) {
+          ctx.fillRect((width - padding.right) * dpr, 0, padding.right * dpr, height * dpr);
+        }
+        ctx.strokeRect(padding.left * dpr, padding.top * dpr, (width - padding.left - padding.right) * dpr, (height - padding.top - padding.bottom) * dpr);
+      }
+
       // render map center
       ctx.setTransform(dpr, 0, 0, dpr, dpr * width / 2, dpr * height / 2);
       ctx.fillStyle = 'lime';
@@ -238,7 +261,11 @@ export class Tyria extends TyriaEventTarget {
       const aspectRatio = size[0] / size[1];
 
       // get size and aspect ratio of the viewport
-      const viewportSizePx = [this.canvas.width / dpr, this.canvas.height / dpr];
+      const padding = getPadding(this.options.padding);
+      const viewportSizePx = [
+        (this.canvas.width / dpr) - padding.left - padding.right,
+        (this.canvas.height / dpr) - padding.top - padding.bottom,
+      ];
       const viewportAspectRatio = viewportSizePx[0] / viewportSizePx[1];
 
       // if the area aspect ratio is larger than the viewport aspect ratio the x-axis is the one we have to fit inside the viewport, otherwise its the y-axis
@@ -255,6 +282,7 @@ export class Tyria extends TyriaEventTarget {
       }
 
       // set center to the middle of the area
+      // TODO: adjust for asymmetric padding
       center = add(view.contain[0], multiply(size, 0.5));
 
       // make sure we are zooming out when zoom snapping

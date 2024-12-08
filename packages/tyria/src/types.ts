@@ -31,3 +31,10 @@ export type ViewOptions = {
    */
   alignToPixels?: boolean;
 }
+
+export type Padding = {
+  top: number,
+  bottom: number,
+  left: number,
+  right: number,
+}
