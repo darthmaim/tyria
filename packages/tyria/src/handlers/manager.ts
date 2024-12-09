@@ -1,11 +1,12 @@
 import { Tyria } from "../Tyria";
+import { ClickZoomHandler } from "./click_zoom";
 import { Handler, NativeEventNameFromSupportedEvent, WrappedEvent } from "./handler";
 import { Inertia } from "./inertia";
 import { InteractionHandler } from "./interaction";
 import { PanHandler } from "./pan";
 import { ScrollZoomHandler } from "./scroll_zoom";
 
-export type SupportedEvents = 'wheel' | 'pointerdown' | 'pointerup' | 'pointermove' | 'windowPointermove' | 'windowPointerup';
+export type SupportedEvents = 'wheel' | 'pointerdown' | 'pointerup' | 'pointermove' | 'dblclick' | 'windowPointermove' | 'windowPointerup';
 
 export class HandlerManager {
   #handlers: Map<string, Handler> = new Map();
@@ -18,12 +19,14 @@ export class HandlerManager {
     this.addHandler('scrollZoom', new ScrollZoomHandler(map));
     this.addHandler('pan', new PanHandler(map));
     this.addHandler('interaction', new InteractionHandler(map));
+    this.addHandler('clickZoom', new ClickZoomHandler(map));
 
     // register events
     map.canvas.addEventListener('wheel', this.#createEventHandler('wheel'), { passive: true });
     map.canvas.addEventListener('pointerdown', this.#createEventHandler('pointerdown'), { passive: true });
     map.canvas.addEventListener('pointerup', this.#createEventHandler('pointerup'), { passive: true });
     map.canvas.addEventListener('pointermove', this.#createEventHandler('pointermove'), { passive: true });
+    map.canvas.addEventListener('dblclick', this.#createEventHandler('dblclick'), { passive: true });
 
     window.addEventListener('pointerup', this.#createEventHandler('windowPointerup'), { passive: true });
     window.addEventListener('pointermove', this.#createEventHandler('windowPointermove'), { passive: true });

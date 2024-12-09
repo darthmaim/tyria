@@ -31,6 +31,7 @@ export abstract class Handler implements EventHandler {
   pointerdown(event: WrappedEvent<PointerEvent>): HandlerResponse {}
   pointerup(event: WrappedEvent<PointerEvent>): HandlerResponse {}
   pointermove(event: WrappedEvent<PointerEvent>): HandlerResponse {}
+  dblclick(event: WrappedEvent<MouseEvent>): HandlerResponse {}
 
   windowPointerup(event: WrappedEvent<PointerEvent>): HandlerResponse {}
   windowPointermove(event: WrappedEvent<PointerEvent>): HandlerResponse {}
