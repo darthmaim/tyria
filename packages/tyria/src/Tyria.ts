@@ -42,6 +42,7 @@ export class Tyria extends TyriaEventTarget {
     this.canvas = document.createElement('canvas');
     this.canvas.style.touchAction = 'none';
     this.canvas.style.userSelect = 'none';
+    this.canvas.style['-webkit-tap-highlight-color'] = 'transparent';
 
     // calculate its size
     this.calculateCanvasSize();
