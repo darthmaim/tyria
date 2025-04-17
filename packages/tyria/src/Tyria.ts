@@ -164,12 +164,18 @@ export class Tyria extends TyriaEventTarget {
     if(this.debug) {
       ctx.save();
 
-      // render bounds
       ctx.setTransform(transform);
-      const bounds = this.project([81920, 114688])
-      ctx.strokeStyle = 'lime';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(0, 0, bounds[0], bounds[1]);
+
+      // render bounds
+      if(this.options.bounds) {
+        const bounds: Bounds = [
+          this.project(this.options.bounds[0]),
+          this.project(this.options.bounds[1])
+        ];
+        ctx.strokeStyle = 'lime';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bounds[0][0], bounds[0][1], bounds[1][0], bounds[1][1]);
+      }
 
       // render cover/contains bounds
       const coverOrContains = this.debugLastViewOptions?.cover ?? this.debugLastViewOptions?.contain;

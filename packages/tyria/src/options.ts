@@ -1,8 +1,11 @@
-import { Padding } from "./types";
+import { Bounds, Padding } from "./types";
 
 export interface TyriaMapOptions {
   /** Background color of the map */
   backgroundColor?: string;
+
+  /** The hard bounds of the map */
+  bounds?: Bounds;
 
   /** The minimum zoom layer */
   minZoom?: number;
