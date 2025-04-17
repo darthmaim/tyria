@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tyria</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #051626;
+    }
+    #map {
+      position: absolute;
+      inset: 0;
+      animation: fadeIn 2s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+    }
+    .controls {
+      position: absolute;
+      top: calc(50% - 48px);
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      background-color: #fff;
+      border-radius: 2px;
+      box-shadow: 0 0 4px rgb(0 0 0 / .5);
+      overflow: hidden;
+    }
+    .controls > button {
+      width: 48px;
+      height: 48px;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .controls > button + button {
+      border-top: 1px solid #eee;
+    }
+    .controls > button:hover {
+      background-color: #eee;
+    }
+    .toolbar {
+      position: absolute;
+      bottom: 16px;
+      background: #fff;
+      margin-left: 50%;
+      margin-right: -50%;
+      transform: translateX(-50%);
+      padding: 16px;
+      border-radius: 2px;
+      box-shadow: 0 0 4px rgb(0 0 0 / .5);
+      display: flex;
+      gap: 16px;
+    }
+    #over {
+      position: absolute;
+      top: 16px;
+      background: #fff;
+      margin-left: 50%;
+      margin-right: -50%;
+      transform: translateX(-50%);
+      padding: 16px;
+      border-radius: 2px;
+      box-shadow: 0 0 4px rgb(0 0 0 / .5);
+      display: flex;
+      gap: 16px;
+    }
+    #over:empty {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="map">
+    <div class="controls">
+      <button onclick="map.easeTo({ zoom: map.view.zoom + .5 }, { duration: 300 })">+</button>
+      <button onclick="map.easeTo({ zoom: map.view.zoom - .5 }, { duration: 300 })">-</button>
+    </div>
+  </div>
+  <div class="toolbar">
+    <label>
+      <input type="checkbox" id="debug"/>
+      debug overlays
+    </label>
+    <!-- <button id="lionsarch">Lion's Arch</button>
+    <button id="ascalon">Ascalon</button>
+    <button id="horn">Horn of Maguuma</button>
+    <button id="cantha">Cantha</button> -->
+  </div>
+  <div id="over"></div>
+  <script type="module">
+    import { Tyria, TileLayer, MarkerLayer } from './dist/index.mjs';
+
+    const map = new Tyria(document.getElementById('map'), {
+      backgroundColor: '#051626',
+      maxZoom: 6,
+      minZoom: 0,
+      nativeZoom: 6,
+      zoomSnap: .5,
+      padding: 0,
+      bounds: [[0, 0], [16384, 16384]],
+    });
+
+    map.addLayer(new TileLayer({
+      source: (x, y, z) => `https://tiles.gw2.ninja/2/1/${z}/${x}/${y}.jpg`,
+      bounds: [[0, 0], [16384, 16384]],
+    }));
+
+    // const markers = new MarkerLayer({
+    //   icon: 'https://render.guildwars2.com/file/32633AF8ADEA696A1EF56D3AE32D617B10D3AC57/157353.png',
+    //   iconSize: [32, 32],
+    //   minZoom: 3,
+    // });
+    // map.addLayer(markers)
+
+    // const waypoints = new Map();
+
+    // fetch('https://api.guildwars2.com/v2/continents/1/floors/1').then((r) => r.json()).then((data) => {
+    //   const wps = Object.values(data.regions ?? []).flatMap((region) => Object.values(region.maps ?? {}).flatMap((map) => Object.values(map.points_of_interest ?? {}).filter((poi) => poi.type === 'waypoint').map((poi) => ({ ...poi, map }))));
+    //   wps.forEach((wp) => waypoints.set(wp.id, wp));
+    //   markers.add(...wps.map((wp) => ({
+    //     id: wp.id,
+    //     position: wp.coord,
+    //   })))
+    // });
+    
+    // map.jumpTo({ center: [49432, 31440], zoom: 2.5 });
+    // map.easeTo({ zoom: 3 }, { duration: 2000, easing: (x) => 1 - Math.pow(1 - x, 3) });
+
+    map.jumpTo({ contain: [[5600, 8900], [15300, 15800]] });
+    
+
+    // map.addEventListener('marker.over', (e) => document.getElementById('over').innerText = waypoints.get(e.markerId).name);
+    // map.addEventListener('marker.leave', (e) => document.getElementById('over').innerText = '');
+    // map.addEventListener('marker.click', (e) => {
+    //   const wp = waypoints.get(e.markerId);
+    //   console.log(wp);
+    //   map.easeTo({ contain: wp.map.continent_rect })
+    // });
+
+    document.getElementById('debug').addEventListener('change', (e) => map.setDebug(e.target.checked));
+
+    // document.getElementById('lionsarch').addEventListener('click', () => map.easeTo({ contain: [[48130, 30720], [50430, 32250]] }))
+    // document.getElementById('ascalon').addEventListener('click', () => map.easeTo({ contain: [[56682, 24700], [64500, 35800]], zoom: 3 }))
+    // document.getElementById('horn').addEventListener('click', () => map.easeTo({ contain: [[19328, 19048], [27296, 24800]] }))
+    // document.getElementById('cantha').addEventListener('click', () => map.easeTo({ contain: [[20576, 97840], [39056, 106256]] }))
+
+    window.map = map;
+  </script>
+</body>
+</html>
