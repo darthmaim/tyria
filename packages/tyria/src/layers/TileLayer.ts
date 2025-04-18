@@ -66,7 +66,7 @@ export class TileLayer implements Layer {
     }
   }
 
-  render({ context, state, project, getImage, reason }: LayerRenderContext) {
+  render({ context, state, project, getImage, reason, map }: LayerRenderContext) {
     performance.mark('tile-layer-render-start');
 
     // get tiles in viewport
@@ -97,6 +97,13 @@ export class TileLayer implements Layer {
 
     // get buffer context to draw to
     const bufferCtx = buffer.getContext('2d', { alpha: false })!;
+
+    // when the buffer is drawn to the main canvas, tiles (or background) from outside can bleed in, because the spec (https://html.spec.whatwg.org/multipage/canvas.html#drawing-images) says:
+    // > When the filtering algorithm requires a pixel value from outside the source rectangle but inside the original image data, then the value from the original image data must be used.
+    // this can happen on the right and bottom edge if the bounds are visible. Thus we fill the buffer with the maps background color first.
+    // TODO: In the future this can be made smarter by only drawing a single pixel gap on the right and bottom edge when drawing the edge tiles to the buffer
+    bufferCtx.fillStyle = map.options.backgroundColor ?? '#000';
+    bufferCtx.fillRect(0, 0, buffer.width, buffer.height);
 
     // TODO:
     // if the zoom level did not change we can reuse the previous buffer
