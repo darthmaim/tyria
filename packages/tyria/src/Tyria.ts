@@ -9,6 +9,7 @@ import { add, clamp, easeInOutCubic, getPadding, multiply, subtract } from './ut
 
 export class Tyria extends TyriaEventTarget {
   canvas: HTMLCanvasElement;
+  #resizeObserver: ResizeObserver;
 
   view: Readonly<View> = {
     center: [0, 0],
@@ -50,9 +51,12 @@ export class Tyria extends TyriaEventTarget {
     // append the canvas to the container
     this.container.appendChild(this.canvas);
 
-    // recalculate size on window resize
-    // TODO: replace with resize observer  to handle resizes for other reasons
-    window.addEventListener('resize', () => this.calculateCanvasSize());
+    // recalculate size on resize
+    this.#resizeObserver = new ResizeObserver(() => {
+      this.calculateCanvasSize()
+      this.#render('render');
+    });
+    this.#resizeObserver.observe(this.container);
   }
 
   /** calculate the size of the canvas based on the container size */
@@ -65,8 +69,6 @@ export class Tyria extends TyriaEventTarget {
     this.canvas.style.height = `${height}px`;
     this.canvas.width = width * dpr;
     this.canvas.height = height * dpr;
-
-    this.queueRender();
   }
 
   /** projects geographical coordinates to pixels at a given zoom */
@@ -348,6 +350,16 @@ export class Tyria extends TyriaEventTarget {
       centerPx[1] = Math.round(centerPx[1] / dpr) * dpr;
       center = this.unproject(centerPx, zoom);
     }
+
+    // // ensure we are within the hard map bounds
+    // if(this.options.bounds) {
+    //   // TODO: calculate the max zoom level so the bounds still fill the viewport
+    //   const maxZoomWithinViewport = 0;
+    //   zoom = Math.max(zoom, maxZoomWithinViewport);
+
+    //   // ensure viewport is within bounds
+
+    // }
 
     return { center, zoom };
   }

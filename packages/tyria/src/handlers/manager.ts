@@ -40,7 +40,7 @@ export class HandlerManager {
         // @ts-expect-error
         const response = handler[type](wrappedEvent);
 
-        if(response !== undefined) {
+        if(response) {
           if(response.view) {
             // resolve the view
             const view = this.map.resolveView(response.view);
