@@ -1,4 +1,4 @@
-import { Layer, LayerHitTestContext, LayerRenderContext, MapState } from "../layer";
+import { Layer, LayerHitTestContext, LayerPreloadContext, LayerRenderContext, MapState } from "../layer";
 import { Bounds, Point } from "../types";
 import { add, divide, subtract } from "../util";
 
@@ -12,8 +12,8 @@ interface MarkerLayerOptions {
 interface Marker {
   id: string,
   position: Point,
-  // icon?: string,
-  // iconSize?: Point;
+  icon?: string,
+  iconSize?: Point;
 }
 
 export class MarkerLayer implements Layer {
@@ -41,13 +41,39 @@ export class MarkerLayer implements Layer {
     performance.measure('marker-layer-render', 'marker-layer-render-start', 'marker-layer-render-end')
   }
 
+  preload(context: LayerPreloadContext) {
+    if(!this.#isVisible(context)) {
+      return;
+    }
+
+    performance.mark('marker-layer-preload-start');
+
+    // preload default image
+    context.getImage(this.#options.icon);
+
+    // preload all images in viewport
+    for(const marker of this.#getMarkersInViewport(context.state)) {
+      if(marker.icon) {
+        context.getImage(marker.icon)
+      }
+    }
+
+    performance.mark('marker-layer-preload-end');
+    performance.measure('marker-layer-preload', 'marker-layer-preload-start', 'marker-layer-preload-end')
+
+  }
+
   #renderMarkers(renderContext: LayerRenderContext) {
-    const image = renderContext.getImage(this.#options.icon);
+    const defaultImage = renderContext.getImage(this.#options.icon);
 
     const markersInViewport = this.#getMarkersInViewport(renderContext.state);
 
     for(const marker of markersInViewport) {
       const position = renderContext.project(marker.position);
+
+      const image = marker.icon
+        ? renderContext.getImage(marker.icon)
+        : defaultImage;
 
       if(!image) {
         continue;
@@ -55,7 +81,7 @@ export class MarkerLayer implements Layer {
 
       renderContext.context.globalAlpha = 1;
 
-      const size: Point = this.#options.iconSize ?? [image.width, image.height]
+      const size: Point = marker.iconSize ?? this.#options.iconSize ?? [image.width, image.height]
       renderContext.context.drawImage(image, position[0] - size[0] / 2, position[1] - size[1] / 2, size[0], size[1]);
     }
   }
@@ -78,7 +104,7 @@ export class MarkerLayer implements Layer {
 
     for(const marker of markersInViewport) {
       const position = context.map.mapCoordinateToCanvasPixel(marker.position);
-      const size: Point = this.#options.iconSize ?? [32, 32]
+      const size: Point = marker.iconSize ?? this.#options.iconSize ?? [32, 32]
       const halfSize = divide(size, 2);
 
       if(isInside(hit, [subtract(position, halfSize), add(position, halfSize)])) {
