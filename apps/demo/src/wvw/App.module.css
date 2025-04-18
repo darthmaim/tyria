@@ -1,0 +1,55 @@
+.layout {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  flex: 1;
+}
+
+@media (max-width: 1200px) {
+  .layout {
+    flex-direction: column;
+  }
+}
+
+.map {
+  flex: 1;
+  position: relative;
+}
+
+.map > canvas {
+  border-radius: 6px;
+  position: absolute;
+  inset: 0;
+}
+
+.sidebar {
+  width: 400px;
+}
+
+
+.controls {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 0 4px rgb(0 0 0 / .5);
+  overflow: hidden;
+  z-index: 1;
+}
+.controls > button {
+  width: 48px;
+  height: 48px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+.controls > button + button {
+  border-top: 1px solid #eee;
+}
+.controls > button:hover {
+  background-color: #eee;
+}
