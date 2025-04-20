@@ -420,6 +420,11 @@ export class Tyria extends TyriaEventTarget {
     // functions to calculate the zoom
     const dz = (t: number) => 2 ** -t;
     const pan = (t: number) => (dz(t) - panSpeedStart) / panSpeedDelta;
+    const zoom = (t: number) => t * deltaZoom + start.zoom;
+    const panAndZoom =
+      deltaZoom === 0
+        ? (t: number) => [start.zoom, t]
+        : (t: number) => { const z = zoom(t); return [z, pan(z)] };
 
     // frame function gets passed a progress (0,1] and
     // calculates the new center/zoom at that progress between start and target
@@ -428,10 +433,10 @@ export class Tyria extends TyriaEventTarget {
       const easedProgress = easing(progress);
 
       // calculate zoom
-      const zoom = easedProgress * deltaZoom + start.zoom;
+      const [zoom, pan] = panAndZoom(easedProgress);
 
       // calculate center
-      const center = add(start.center, multiply(deltaCenter, pan(zoom)));
+      const center = add(start.center, multiply(deltaCenter, pan));
 
       // set view to the calculated center and zoom
       this.view = { center, zoom };
