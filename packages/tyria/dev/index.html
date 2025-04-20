@@ -88,6 +88,7 @@
       debug overlays
     </label>
     <button id="lionsarch">Lion's Arch</button>
+    <button id="lionsarch2">Lion's Arch (padding)</button>
     <button id="ascalon">Ascalon</button>
     <button id="horn">Horn of Maguuma</button>
     <button id="cantha">Cantha</button>
@@ -101,9 +102,8 @@
       maxZoom: 7,
       minZoom: 1,
       zoomSnap: .5,
-      padding: 80,
       bounds: [[0, 0], [81920, 114688]],
-      // padding: { top: 16, bottom: 80, left: 16, right: 80 },
+      padding: { top: 16, bottom: 80, left: 16, right: 80 },
     });
 
     map.addLayer(new TileLayer({
@@ -143,6 +143,7 @@
     document.getElementById('debug').addEventListener('change', (e) => map.setDebug(e.target.checked));
 
     document.getElementById('lionsarch').addEventListener('click', () => map.easeTo({ contain: [[48130, 30720], [50430, 32250]] }))
+    document.getElementById('lionsarch2').addEventListener('click', () => map.easeTo({ contain: [[48130, 30720], [50430, 32250]], padding: { top: 16, right: 80, bottom: 80, left: 1000 } }))
     document.getElementById('ascalon').addEventListener('click', () => map.easeTo({ contain: [[56682, 24700], [64500, 35800]], zoom: 3 }))
     document.getElementById('horn').addEventListener('click', () => map.easeTo({ contain: [[19328, 19048], [27296, 24800]] }))
     document.getElementById('cantha').addEventListener('click', () => map.easeTo({ contain: [[20576, 97840], [39056, 106256]] }))
