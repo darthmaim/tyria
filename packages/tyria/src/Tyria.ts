@@ -9,6 +9,7 @@ import { add, clamp, easeInOutCubic, getPadding, multiply, subtract } from './ut
 
 export class Tyria extends TyriaEventTarget {
   canvas: HTMLCanvasElement;
+  #resizeObserver: ResizeObserver;
 
   view: Readonly<View> = {
     center: [0, 0],
@@ -50,9 +51,12 @@ export class Tyria extends TyriaEventTarget {
     // append the canvas to the container
     this.container.appendChild(this.canvas);
 
-    // recalculate size on window resize
-    // TODO: replace with resize observer  to handle resizes for other reasons
-    window.addEventListener('resize', () => this.calculateCanvasSize());
+    // recalculate size on resize
+    this.#resizeObserver = new ResizeObserver(() => {
+      this.calculateCanvasSize()
+      this.#render('render');
+    });
+    this.#resizeObserver.observe(this.container);
   }
 
   /** calculate the size of the canvas based on the container size */
