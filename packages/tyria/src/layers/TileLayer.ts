@@ -139,7 +139,7 @@ export class TileLayer implements Layer {
             );
           } else {
             // clear the rect in the buffer, because it might still contain old tiles
-            bufferCtx.clearRect((x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize);
+            bufferCtx.fillRect((x - tileTopLeft[0]) * tileSize, (y - tileTopLeft[1]) * tileSize, tileSize, tileSize);
           }
 
           if(state.debug) {
