@@ -4,7 +4,7 @@ import { ImageManager } from './image-manager';
 import { Layer, LayerHitTestContext, LayerPreloadContext, LayerRenderContext } from './layer';
 import { TyriaMapOptions } from './options';
 import { RenderQueue, RenderQueuePriority, RenderReason } from './render-queue';
-import { Bounds, Point, View, ViewOptions } from './types';
+import { Bounds, Padding, Point, View, ViewOptions } from './types';
 import { add, clamp, easeInOutCubic, getPadding, multiply, subtract } from './util';
 
 export class Tyria extends TyriaEventTarget {
@@ -13,7 +13,8 @@ export class Tyria extends TyriaEventTarget {
 
   view: Readonly<View> = {
     center: [0, 0],
-    zoom: 1
+    zoom: 1,
+    padding: { top: 0, right: 0, bottom: 0, left: 0 },
   }
   layers: { id: number, layer: Layer }[] = [];
   debug = false
@@ -118,9 +119,11 @@ export class Tyria extends TyriaEventTarget {
     const dpr = window.devicePixelRatio || 1;
     const width = this.canvas.width / dpr;
     const height = this.canvas.height / dpr;
+    const padding = this.view.padding;
+
     const translate = this.project(this.view.center);
-    const translateX = -translate[0] + (width / 2);
-    const translateY = -translate[1] + (height / 2);
+    const translateX = -translate[0] + (padding.left - padding.right + width) / 2;
+    const translateY = -translate[1] + (padding.top - padding.bottom + height) / 2;
 
     const transform = new DOMMatrix([dpr, 0, 0, dpr, translateX * dpr, translateY * dpr]);
 
@@ -133,6 +136,7 @@ export class Tyria extends TyriaEventTarget {
         zoom: this.view.zoom,
         width,
         height,
+        padding,
         area: this.#getViewportArea(this.view),
         dpr,
         debug: this.debug,
@@ -199,35 +203,35 @@ export class Tyria extends TyriaEventTarget {
       ctx.resetTransform();
 
       // render padding
-      if(this.options.padding && this.debugLastViewOptions?.contain) {
-        ctx.fillStyle = '#673AB788';
-        ctx.strokeStyle = '#673AB7';
-        ctx.lineWidth = 2 * dpr;
+      ctx.fillStyle = '#673AB788';
+      ctx.strokeStyle = '#673AB7';
+      ctx.lineWidth = 2 * dpr;
 
-        const padding = getPadding(this.options.padding);
-
-        if(padding.top) {
-          ctx.fillRect(padding.left * dpr, 0, (width - padding.left - padding.right) * dpr, padding.top * dpr);
-        }
-        if(padding.bottom) {
-          ctx.fillRect(padding.left * dpr, (height - padding.bottom) * dpr, (width - padding.left - padding.right) * dpr, height * dpr);
-        }
-        if(padding.left) {
-          ctx.fillRect(0, 0, padding.left * dpr, height * dpr);
-        }
-        if(padding.right) {
-          ctx.fillRect((width - padding.right) * dpr, 0, padding.right * dpr, height * dpr);
-        }
-        ctx.strokeRect(padding.left * dpr, padding.top * dpr, (width - padding.left - padding.right) * dpr, (height - padding.top - padding.bottom) * dpr);
+      if(padding.top) {
+        ctx.fillRect(padding.left * dpr, 0, (width - padding.left - padding.right) * dpr, padding.top * dpr);
       }
+      if(padding.bottom) {
+        ctx.fillRect(padding.left * dpr, (height - padding.bottom) * dpr, (width - padding.left - padding.right) * dpr, height * dpr);
+      }
+      if(padding.left) {
+        ctx.fillRect(0, 0, padding.left * dpr, height * dpr);
+      }
+      if(padding.right) {
+        ctx.fillRect((width - padding.right) * dpr, 0, padding.right * dpr, height * dpr);
+      }
+      ctx.strokeRect(padding.left * dpr, padding.top * dpr, (width - padding.left - padding.right) * dpr, (height - padding.top - padding.bottom) * dpr);
 
       // render map center
-      ctx.setTransform(dpr, 0, 0, dpr, dpr * width / 2, dpr * height / 2);
+      ctx.setTransform(dpr, 0, 0, dpr, dpr * (padding.left - padding.right + width) / 2, dpr * (padding.top - padding.bottom + height) / 2);
       ctx.fillStyle = 'lime';
       ctx.fillRect(-4, -4, 8, 8);
       ctx.font = '12px monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
+      ctx.fillStyle = '#000';
+      ctx.fillText(`px ${translate[0]}, ${translate[1]}`, 8 + 1, 0 + 1);
+      ctx.fillText(`map ${this.view.center[0]}, ${this.view.center[1]}`, 8 + 1, 16 + 1);
+      ctx.fillText(`zoom ${this.view.zoom}`, 8 + 1, 32 + 1);
       ctx.fillStyle = '#fff';
       ctx.fillText(`px ${translate[0]}, ${translate[1]}`, 8, 0);
       ctx.fillText(`map ${this.view.center[0]}, ${this.view.center[1]}`, 8, 16);
@@ -266,6 +270,9 @@ export class Tyria extends TyriaEventTarget {
     // get dpr to correctly calculate viewport size
     const dpr = window.devicePixelRatio ?? 1;
 
+    // get padding
+    const padding = getPadding(view.padding ?? this.options.padding);
+
     // make sure the area is completely visible in the viewport
     // TODO: handle passing contain + center?
     if(view.contain) {
@@ -274,7 +281,6 @@ export class Tyria extends TyriaEventTarget {
       const aspectRatio = size[0] / size[1];
 
       // get size and aspect ratio of the viewport
-      const padding = getPadding(this.options.padding);
       const viewportSizePx = [
         (this.canvas.width / dpr) - padding.left - padding.right,
         (this.canvas.height / dpr) - padding.top - padding.bottom,
@@ -295,7 +301,6 @@ export class Tyria extends TyriaEventTarget {
       }
 
       // set center to the middle of the area
-      // TODO: adjust for asymmetric padding
       center = add(view.contain[0], multiply(size, 0.5));
 
       // make sure we are zooming out when zoom snapping
@@ -374,7 +379,7 @@ export class Tyria extends TyriaEventTarget {
       zoom = Math.max(minZoom, zoom);
 
       // as a second step  make sure the viewport position is within the bounds
-      const viewport = this.#getViewportArea({ center, zoom });
+      const viewport = this.#getViewportArea({ center, zoom, padding });
 
       const topLeftDelta = subtract(viewport[0], this.options.bounds[0]);
       const bottomRightDelta = subtract(viewport[1], this.options.bounds[1]);
@@ -392,17 +397,21 @@ export class Tyria extends TyriaEventTarget {
       }
     }
 
-    return { center, zoom };
+    return { center, zoom, padding };
   }
 
   /** Gets the area visible in the viewport */
-  #getViewportArea(view: View): Bounds {
+  #getViewportArea(view: Readonly<View>): Bounds {
     const dpr = window.devicePixelRatio ?? 1;
-    const viewportHalfSizePx: Point = [this.canvas.width / dpr / 2, this.canvas.height / dpr / 2];
+    const padding = view.padding;
+    const viewportHalfSizePx: Point = [
+      (padding.left - padding.right + this.canvas.width / dpr) / 2,
+      (padding.top - padding.bottom + this.canvas.height / dpr) / 2
+    ];
     const centerPx = this.project(view.center, view.zoom);
 
-    const topLeft = this.unproject(subtract(centerPx, viewportHalfSizePx), view.zoom);
-    const bottomRight = this.unproject(add(centerPx, viewportHalfSizePx), view.zoom);
+    const topLeft = this.unproject(subtract(subtract(centerPx, viewportHalfSizePx), 0), view.zoom);
+    const bottomRight = this.unproject(add(add(centerPx, viewportHalfSizePx), [padding.right - padding.left, padding.bottom - padding.top]), view.zoom);
 
     return [topLeft, bottomRight];
   }
@@ -438,7 +447,7 @@ export class Tyria extends TyriaEventTarget {
     const target = this.resolveView(view);
 
     // if we are not moving, don't move
-    if(target.zoom === start.zoom && target.center[0] === start.center[0] && target.center[1] === start.center[1]) {
+    if(target.zoom === start.zoom && target.center[0] === start.center[0] && target.center[1] === start.center[1] && target.padding.top === start.padding.top && target.padding.right === start.padding.right && target.padding.bottom === start.padding.bottom && target.padding.left === start.padding.left) {
       return;
     }
 
@@ -448,10 +457,10 @@ export class Tyria extends TyriaEventTarget {
     const startArea = this.#getViewportArea(start);
     const targetArea = this.#getViewportArea(target);
     const combinedArea: Bounds = [
-      [Math.min(startArea[0][0], targetArea[0][0]), Math.min(startArea[0][1], targetArea[0][1])] as Point,
-      [Math.max(startArea[1][0], targetArea[1][0]), Math.max(startArea[1][1], targetArea[1][1])] as Point
+      [Math.min(startArea[0][0], targetArea[0][0]), Math.min(startArea[0][1], targetArea[0][1])],
+      [Math.max(startArea[1][0], targetArea[1][0]), Math.max(startArea[1][1], targetArea[1][1])]
     ];
-    this.preload(this.resolveView({ contain: combinedArea }));
+    this.preload({ contain: combinedArea, padding: 0 });
 
     // calculate delta
     const deltaZoom = target.zoom - start.zoom;
@@ -478,8 +487,16 @@ export class Tyria extends TyriaEventTarget {
       // calculate center
       const center = add(start.center, multiply(deltaCenter, easedProgress * speedup));
 
+      // calculate padding
+      const padding: Padding = {
+        top: start.padding.top + (target.padding.top - start.padding.top) * easedProgress,
+        right: start.padding.right + (target.padding.right - start.padding.right) * easedProgress,
+        bottom: start.padding.bottom + (target.padding.bottom - start.padding.bottom) * easedProgress,
+        left: start.padding.left + (target.padding.left - start.padding.left) * easedProgress,
+      }
+
       // set view to the calculated center and zoom
-      this.view = { center, zoom };
+      this.view = { center, zoom, padding };
 
       if(progress === 1) {
         performance.mark('easeTo-end');
@@ -491,6 +508,7 @@ export class Tyria extends TyriaEventTarget {
 
     if(duration === 0) {
       // if the duration of the transition is 0 we just call the end frame
+      // TODO: why not just call `jumpTo(view)` at the start?
       frame(1);
     } else {
       // store current ease and queue frame
@@ -537,11 +555,14 @@ export class Tyria extends TyriaEventTarget {
   /** Convert a pixel in the canvas (for example offsetX/offsetY from an event) to the corresponding map coordinates at that point */
   canvasPixelToMapCoordinate([x, y]: Point) {
     const dpr = window.devicePixelRatio || 1;
+    const padding = this.view.padding;
 
-    const halfWidth = this.canvas.width / dpr / 2;
-    const halfHeight = this.canvas.height / dpr / 2;
+    const viewportHalfSizePx: Point = [
+      (padding.left - padding.right + this.canvas.width) / dpr / 2,
+      (padding.top - padding.bottom + this.canvas.height) / dpr / 2
+    ];
 
-    const offset: Point = this.unproject([-x + halfWidth, -y + halfHeight]);
+    const offset: Point = this.unproject([-x + viewportHalfSizePx[0], -y + viewportHalfSizePx[1]]);
 
     return subtract(this.view.center, offset);
   }
@@ -549,10 +570,11 @@ export class Tyria extends TyriaEventTarget {
   /** Convert a map coordinate to canvas px */
   mapCoordinateToCanvasPixel(coordinate: Point) {
     const dpr = window.devicePixelRatio || 1;
+    const padding = this.view.padding;
 
     const viewportHalfSizePx: Point = [
-      this.canvas.width / dpr / 2,
-      this.canvas.height / dpr / 2
+      (padding.left - padding.right + this.canvas.width) / dpr / 2,
+      (padding.top - padding.bottom + this.canvas.height) / dpr / 2
     ];
 
     const pointPx = this.project(coordinate);
@@ -582,6 +604,7 @@ export class Tyria extends TyriaEventTarget {
         zoom: target.zoom,
         width: this.canvas.width / dpr,
         height: this.canvas.height / dpr,
+        padding: target.padding,
         area: this.#getViewportArea(target),
         dpr: dpr,
         debug: this.debug,
@@ -651,6 +674,7 @@ export class Tyria extends TyriaEventTarget {
         zoom: this.view.zoom,
         width,
         height,
+        padding: this.view.padding,
         area: this.#getViewportArea(this.view),
         dpr,
         debug: this.debug,
