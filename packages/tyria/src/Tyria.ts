@@ -411,12 +411,15 @@ export class Tyria extends TyriaEventTarget {
     this.preload(this.resolveView({ contain: combinedArea }));
 
     // calculate delta
+    const panSpeedStart = 2 ** -start.zoom;
+    const panSpeedTarget = 2 ** -target.zoom;
+    const panSpeedDelta = panSpeedTarget - panSpeedStart;
     const deltaZoom = target.zoom - start.zoom;
     const deltaCenter = subtract(target.center, start.center);
 
     // functions to calculate the zoom
-    const s = (x: number) => ((1 / (2 ** deltaZoom)) - 1) * x + 1;
-    const z = (x: number) => Math.log2(1 / s(x));
+    const dz = (t: number) => 2 ** -t;
+    const pan = (t: number) => (dz(t) - panSpeedStart) / panSpeedDelta;
 
     // frame function gets passed a progress (0,1] and
     // calculates the new center/zoom at that progress between start and target
@@ -425,15 +428,10 @@ export class Tyria extends TyriaEventTarget {
       const easedProgress = easing(progress);
 
       // calculate zoom
-      const zoom = z(easedProgress) + start.zoom;
-
-      // when animating both the zoom and the center it appears to get faster when zooming in (and slower when zooming out)
-      // to compensate this we need need to calculate a speedup factor based on the deltaZoom
-      // TODO: find correct equation (needs to be always 1 at 100%, before that it needs to be >1 when zooming in (faster at start (because we are zoomed out further and translation appears slower)) and <1 when zooming out)
-      const speedup = 1;
+      const zoom = easedProgress * deltaZoom + start.zoom;
 
       // calculate center
-      const center = add(start.center, multiply(deltaCenter, easedProgress * speedup));
+      const center = add(start.center, multiply(deltaCenter, pan(zoom)));
 
       // set view to the calculated center and zoom
       this.view = { center, zoom };
