@@ -339,9 +339,9 @@ export class Tyria extends TyriaEventTarget {
       const scale = 1 - 2 ** (current.zoom - zoom);
 
       // calculate offset, apply scale and add to current center
-      const offset = subtract(view.around, current.center);
+      const offset = subtract(view.around, center);
       const scaledOffset = multiply(offset, scale);
-      center = add(current.center, scaledOffset);
+      center = add(center, scaledOffset);
     }
 
     // make sure the center aligns with device pixels
