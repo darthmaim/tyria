@@ -359,10 +359,10 @@ export class Tyria extends TyriaEventTarget {
   #getViewportArea(view: View): Bounds {
     const dpr = window.devicePixelRatio ?? 1;
     const viewportHalfSizePx: Point = [this.canvas.width / dpr / 2, this.canvas.height / dpr / 2];
-    const centerPx = this.project(view.center);
+    const centerPx = this.project(view.center, view.zoom);
 
-    const topLeft = this.unproject(subtract(centerPx, viewportHalfSizePx));
-    const bottomRight = this.unproject(add(centerPx, viewportHalfSizePx));
+    const topLeft = this.unproject(subtract(centerPx, viewportHalfSizePx), view.zoom);
+    const bottomRight = this.unproject(add(centerPx, viewportHalfSizePx), view.zoom);
 
     return [topLeft, bottomRight];
   }
