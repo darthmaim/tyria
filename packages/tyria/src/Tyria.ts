@@ -70,7 +70,9 @@ export class Tyria extends TyriaEventTarget {
     this.canvas.width = width * dpr;
     this.canvas.height = height * dpr;
 
-    this.queueRender();
+    // resolve view, as the viewport might be out of bounds now
+    // TODO: store alignToPixel in view, as this might suddenly align otherwise
+    this.view = this.resolveView(this.view);
   }
 
   /** projects geographical coordinates to pixels at a given zoom */
@@ -350,6 +352,44 @@ export class Tyria extends TyriaEventTarget {
       centerPx[0] = Math.round(centerPx[0] / dpr) * dpr;
       centerPx[1] = Math.round(centerPx[1] / dpr) * dpr;
       center = this.unproject(centerPx, zoom);
+    }
+
+    // make sure the viewport is within the bounds
+    if(this.options.bounds) {
+      // as first step make sure the zoom is far enough in so that viewport can completely fit inside the bounds
+      const size = subtract(this.options.bounds[1], this.options.bounds[0]);
+      const aspectRatio = size[0] / size[1];
+
+      // get size and aspect ratio of the viewport
+      const viewportSizePx = [this.canvas.width / dpr, this.canvas.height / dpr];
+      const viewportAspectRatio = viewportSizePx[0] / viewportSizePx[1];
+
+      // if the aspect ratio is larger than the viewport aspect ratio the y axis is the one we have to match to the viewport, otherwise its the x axis
+      const dominantAxis = aspectRatio > viewportAspectRatio ? 1 : 0;
+
+      // calculate zoom so that size[dominantAxis] is equals viewportSize[dominantAxis]
+      const zoomScale = 2 ** (this.options.nativeZoom ?? this.options.maxZoom ?? 0) * viewportSizePx[dominantAxis] / size[dominantAxis];
+
+      const minZoom = Math.log2(zoomScale);
+      zoom = Math.max(minZoom, zoom);
+
+      // as a second step  make sure the viewport position is within the bounds
+      const viewport = this.#getViewportArea({ center, zoom });
+
+      const topLeftDelta = subtract(viewport[0], this.options.bounds[0]);
+      const bottomRightDelta = subtract(viewport[1], this.options.bounds[1]);
+
+      if(topLeftDelta[0] < 0) {
+        center[0] -= topLeftDelta[0];
+      } else if(bottomRightDelta[0] > 0) {
+        center[0] -= bottomRightDelta[0];
+      }
+
+      if(topLeftDelta[1] < 0) {
+        center[1] -= topLeftDelta[1];
+      } else if(bottomRightDelta[1] > 0) {
+        center[1] -= bottomRightDelta[1];
+      }
     }
 
     return { center, zoom };
