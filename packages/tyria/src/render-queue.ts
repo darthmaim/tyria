@@ -34,7 +34,7 @@ export class RenderQueue {
       });
     } else {
       // render in 80ms (5 frames at ~60fps), so we can collect some more queueRenders until then (for example from image loading promises resolving)
-      this.#renderQueueTimeout = setTimeout(() => {
+      this.#renderQueueTimeout = window.setTimeout(() => {
         this.#renderQueueTimeout = undefined;
         this.#render(this.#reason);
       }, 80);
