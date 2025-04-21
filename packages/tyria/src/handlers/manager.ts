@@ -49,7 +49,12 @@ export class HandlerManager {
             this.#inertia.record(view);
 
             // apply view
-            this.map.jumpTo(view)
+            this.map.jumpTo({
+              ...view,
+
+              // never align this to canvas pixels, as `resolveView` already does it (unless `response.view.alignToPixels` is false) and it would just be double work
+              alignToPixels: false
+            });
           }
 
           if(response.applyInertia) {

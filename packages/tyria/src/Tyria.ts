@@ -346,7 +346,6 @@ export class Tyria extends TyriaEventTarget {
 
     // make sure the center aligns with device pixels
     if(view.alignToPixels ?? true) {
-      const dpr = window.devicePixelRatio ?? 1;
       const centerPx = this.project(center, zoom);
       centerPx[0] = Math.round(centerPx[0] / dpr) * dpr;
       centerPx[1] = Math.round(centerPx[1] / dpr) * dpr;
