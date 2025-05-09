@@ -54,7 +54,7 @@ const mapOptions: TyriaMapOptions = {
   nativeZoom: 6,
   zoomSnap: .5,
   padding: 0,
-  bounds: [[0, 0], [16384, 16384]],
+  bounds: [[5400, 8900], [15500, 16000]],
 };
 
 export default function App() {
