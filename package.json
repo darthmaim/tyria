@@ -1,10 +1,12 @@
 {
   "private": true,
   "workspaces": [
+    "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -ws"
+    "build": "npm run build -w tyria && npm run build -w demo",
+    "dev": "npm run dev -w tyria & npm run dev -w demo"
   },
   "packageManager": "npm@10.8.1"
 }

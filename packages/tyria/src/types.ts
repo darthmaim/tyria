@@ -7,6 +7,9 @@ export type View = {
 
   /** The zoom level of the map */
   zoom: number;
+
+  /** The padding of the map */
+  padding: Padding;
 }
 
 export type ViewOptions = {
@@ -24,6 +27,9 @@ export type ViewOptions = {
 
   /** Makes sure the viewport is completely within this area. */
   cover?: Bounds;
+
+  /** Override map padding */
+  padding?: Partial<Padding> | number;
 
   /**
    * Modifies the center to align with device pixels so tiles stay sharp.
