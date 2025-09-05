@@ -44,7 +44,7 @@ export class ImageManager {
   #recentlyPreloaded: { src: string, priority: number, image: ImageBitmap }[] = [];
 
   constructor(map: Tyria) {
-    this.#worker = new Worker(new URL('./image-fetch-worker.mjs', import.meta.url));
+    this.#worker = new Worker(new URL('./image-fetch-worker.js', import.meta.url));
     this.#worker.onmessage = (e) => {
       const entries = e.data as { src: string, priority: number, image: ImageBitmap | undefined }[];
 

@@ -37,7 +37,7 @@ export class RenderQueue {
       this.#renderQueueTimeout = window.setTimeout(() => {
         this.#renderQueueTimeout = undefined;
         this.#render(this.#reason);
-      }, 80);
+      }, 80) as unknown as number;
     }
 
     // store that render is already queued so we don't queue twice

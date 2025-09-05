@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tyria</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #051626;
+    }
+    #map {
+      position: absolute;
+      inset: 0;
+      animation: fadeIn 2s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+    }
+    .controls {
+      position: absolute;
+      top: calc(50% - 48px);
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      background-color: #fff;
+      border-radius: 2px;
+      box-shadow: 0 0 4px rgb(0 0 0 / .5);
+      overflow: hidden;
+    }
+    .controls > button {
+      width: 48px;
+      height: 48px;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .controls > button + button {
+      border-top: 1px solid #eee;
+    }
+    .controls > button:hover {
+      background-color: #eee;
+    }
+    .toolbar {
+      position: absolute;
+      bottom: 16px;
+      background: #fff;
+      margin-left: 50%;
+      margin-right: -50%;
+      transform: translateX(-50%);
+      padding: 16px;
+      border-radius: 2px;
+      box-shadow: 0 0 4px rgb(0 0 0 / .5);
+      display: flex;
+      gap: 16px;
+    }
+    #over {
+      position: absolute;
+      top: 16px;
+      background: #fff;
+      margin-left: 50%;
+      margin-right: -50%;
+      transform: translateX(-50%);
+      padding: 16px;
+      border-radius: 2px;
+      box-shadow: 0 0 4px rgb(0 0 0 / .5);
+      display: flex;
+      gap: 16px;
+    }
+    #over:empty {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="map">
+    <div class="controls">
+      <button onclick="map.easeTo({ zoom: map.view.zoom + .5 }, { duration: 300 })">+</button>
+      <button onclick="map.easeTo({ zoom: map.view.zoom - .5 }, { duration: 300 })">-</button>
+    </div>
+  </div>
+  <div class="toolbar">
+    <label>
+      <input type="checkbox" id="debug"/>
+      debug overlays
+    </label>
+    <button id="lionsarch">Lion's Arch</button>
+    <button id="lionsarch2">Lion's Arch (padding)</button>
+    <button id="ascalon">Ascalon</button>
+    <button id="horn">Horn of Maguuma</button>
+    <button id="cantha">Cantha</button>
+  </div>
+  <div id="over"></div>
+  <div id="infobox"></div>
+  <script type="module" src="/src/index.ts"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { ImageGetOptions } from "./image-manager";
 import { RenderReason } from "./render-queue";
-import { Bounds, Point } from "./types";
+import { Bounds, Padding, Point } from "./types";
 import { Tyria } from "./Tyria";
 
 export interface Layer {
@@ -22,6 +22,9 @@ export interface MapState {
 
   /** height of the map in px */
   height: number,
+
+  /** padding of the map area */
+  padding: Padding,
 
   /** The visible area in the viewport in map coordinates */
   area: Bounds,
