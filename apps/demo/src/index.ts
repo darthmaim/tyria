@@ -3,7 +3,7 @@ import { Tyria, TileLayer, MarkerLayer } from 'tyria';
 const map = new Tyria(document.getElementById('map')!, {
   backgroundColor: '#051626',
   maxZoom: 7,
-  minZoom: 1,
+  minZoom: 0,
   zoomSnap: .5,
   // padding: 80,
   bounds: [[0, 0], [81920, 114688]],
@@ -11,7 +11,7 @@ const map = new Tyria(document.getElementById('map')!, {
 });
 
 map.addLayer(new TileLayer({
-  source: (x, y, z) => `https://tiles.gw2.io/1/1/${z}/${x}/${y}.jpg`,
+  source: (x, y, z) => `https://tiles.guildwars2.com/1/1/${z}/${x}/${y}.jpg`,
   bounds: [[0, 0], [81920, 114688]],
 }));
 
