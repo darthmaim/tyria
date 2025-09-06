@@ -1,18 +1,32 @@
 import { Tyria, TileLayer, MarkerLayer } from 'tyria';
 
+let floor = 1;
+const floors = new Map<number, { id: number, clamped_view: [[number, number], [number, number]] }>();
+
+const changeFloor = (f: number, ease = true) => {
+  floor = f;
+  map.queueRender('low-priority');
+
+  map.setBounds(floors.get(f)?.clamped_view ?? [[6800, 9000], [81920, 114688]])
+
+  if(ease) {
+    map.easeTo({ cover: floors.get(f)?.clamped_view });
+  }
+}
+
 const map = new Tyria(document.getElementById('map')!, {
   backgroundColor: '#051626',
   maxZoom: 7,
   minZoom: 0,
   zoomSnap: .5,
   // padding: 80,
-  bounds: [[0, 0], [81920, 114688]],
+  bounds: [[6800, 9000], [81920, 114688]],
   padding: { top: 16, bottom: 80, left: 16, right: 80 },
 });
 
 map.addLayer(new TileLayer({
-  source: (x, y, z) => `https://tiles.guildwars2.com/1/1/${z}/${x}/${y}.jpg`,
-  bounds: [[0, 0], [81920, 114688]],
+  source: (x, y, z) => `https://tiles.guildwars2.com/1/${floor}/${z}/${x}/${y}.jpg`,
+  bounds: [[6800, 9000], [81920, 114688]],
 }));
 
 const markers = new MarkerLayer({
@@ -24,9 +38,23 @@ map.addLayer(markers)
 
 const waypoints = new Map();
 
-fetch('https://api.guildwars2.com/v2/continents/1/floors/1').then((r) => r.json()).then((data) => {
+fetch('https://api.guildwars2.com/v2/continents/1/floors?ids=all').then((r) => r.json()).then((data) => {
   // @ts-expect-error test
-  const wps = Object.values(data.regions ?? []).flatMap((region) => Object.values(region.maps ?? {}).flatMap((map) => Object.values(map.points_of_interest ?? {}).filter((poi) => poi.type === 'waypoint').map((poi) => ({ ...poi, map }))));
+  data.forEach(({ id, clamped_view }) => {
+    if(!clamped_view) {
+      return;
+    }
+
+    floors.set(id, { id, clamped_view });
+    const button = document.createElement('button');
+    button.innerText = id;
+    button.id = 'floor-' + id;
+    document.getElementById('floors')?.appendChild(button);
+    button.onclick = () => changeFloor(id, false);
+  });
+
+  // @ts-expect-error test
+  const wps = Object.values(data[0].regions ?? []).flatMap((region) => Object.values(region.maps ?? {}).flatMap((map) => Object.values(map.points_of_interest ?? {}).filter((poi) => poi.type === 'waypoint').map((poi) => ({ ...poi, map }))));
   wps.forEach((wp) => waypoints.set(wp.id, wp));
   markers.add(...wps.map((wp) => ({
     id: wp.id,
@@ -42,7 +70,17 @@ map.addEventListener('marker.leave', () => document.getElementById('over')!.inne
 map.addEventListener('marker.click', (e) => {
   const wp = waypoints.get(e.markerId);
   console.log(wp);
+  changeFloor(wp.floor, false);
   map.easeTo({ contain: wp.map.continent_rect })
+});
+
+map.addEventListener('map.view', (e) => {
+  const center = e.map.view.center;
+
+  for(const f of floors.values()) {
+    const isVisible = f.clamped_view[0][0] < center[0] && f.clamped_view[1][0] > center[0] && f.clamped_view[0][1] < center[1] && f.clamped_view[1][1] > center[1];
+    document.getElementById('floor-' + f.id)!.hidden = !isVisible;
+  }
 });
 
 // @ts-expect-error test
@@ -56,3 +94,5 @@ document.getElementById('cantha')!.addEventListener('click', () => map.easeTo({ 
 
 // @ts-expect-error debug
 window.map = map;
+// @ts-expect-error debug
+window.changeFloor = changeFloor;

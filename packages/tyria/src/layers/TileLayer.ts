@@ -23,7 +23,7 @@ export class TileLayer implements Layer {
       : new OffscreenCanvas(0, 0);
   }
 
-  getTiles({ state, project }: Pick<LayerRenderContext, 'state' | 'project'>) {
+  getTiles({ state, project, map }: Pick<LayerRenderContext, 'state' | 'project' | 'map'>) {
     // get the zoom level of tiles to use (prefer higher resolution)
     const zoom = Math.ceil(state.zoom);
 
@@ -42,8 +42,8 @@ export class TileLayer implements Layer {
     const center = project(state.center);
 
     // get the bounds (px) in which we render
-    const boundsTopLeft = project(this.options.bounds?.[0] ?? [0, 0]);
-    const boundsBottomRight = project(this.options.bounds?.[1] ?? [0, 0]);
+    const boundsTopLeft = project(this.options.bounds?.[0] ?? map.options.bounds?.[0] ?? [0, 0]);
+    const boundsBottomRight = project(this.options.bounds?.[1] ?? map.options.bounds?.[1] ?? [0, 0]);
 
     // get the top left position (px)
     const topLeftX = Math.max(center[0] - (state.padding.left - state.padding.right + state.width) / 2, boundsTopLeft[0]);
@@ -76,7 +76,7 @@ export class TileLayer implements Layer {
       tileBottomRight,
       zoom,
       renderedTileSize
-    } = this.getTiles({ state, project });
+    } = this.getTiles({ state, project, map });
 
     // create buffer canvas to render
     const buffer = this.frameBuffer;

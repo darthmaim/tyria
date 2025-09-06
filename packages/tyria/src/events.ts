@@ -16,6 +16,7 @@ export type TyriaEvents = {
   'marker.over': MarkerEvent<'marker.over'>,
   'marker.leave': MarkerEvent<'marker.leave'>,
   'marker.click': MarkerEvent<'marker.click'>,
+  'map.view': TyriaEvent<'map.view'>
 }
 
 export type TyriaEventType = keyof TyriaEvents;
@@ -28,6 +29,7 @@ export class TyriaEventTarget {
     'marker.over': new Set(),
     'marker.leave': new Set(),
     'marker.click': new Set(),
+    'map.view': new Set(),
   }
 
   addEventListener<E extends TyriaEventType>(type: E, listener: TyriaEventListener<E>) {

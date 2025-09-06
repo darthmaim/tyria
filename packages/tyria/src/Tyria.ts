@@ -39,6 +39,10 @@ export class Tyria extends TyriaEventTarget {
     this.queueRender();
   }
 
+  setBounds(bounds: Bounds) {
+    this.options.bounds = bounds;
+  }
+
   private createCanvas() {
     // create canvas
     this.canvas = document.createElement('canvas');
@@ -430,6 +434,8 @@ export class Tyria extends TyriaEventTarget {
 
     // render the changes
     this.queueRender();
+
+    this.dispatchEvent({ type: 'map.view', map: this });
   }
 
   /** Transition to the provided view */
@@ -501,6 +507,7 @@ export class Tyria extends TyriaEventTarget {
       if(progress === 1) {
         performance.mark('easeTo-end');
         performance.measure('easeTo', 'easeTo-start', 'easeTo-end');
+        this.dispatchEvent({ type: 'map.view', map: this });
       }
     }
 

@@ -89,7 +89,7 @@ const TyriaMap: FC<{ options: TyriaMapOptions, ref?: Ref<Tyria>, onObjectiveClic
     if(element && !tyria.current) {
       tyria.current = new Tyria(element, options);
       tyria.current.addLayer(new TileLayer({
-        source: (x, y, z) => `https://tiles.gw2.ninja/2/1/${z}/${x}/${y}.jpg`,
+        source: (x, y, z) => `https://tiles.gw2.ninja/2/3/${z}/${x}/${y}.jpg`,
         bounds: [[0, 0], [16384, 16384]],
       }));
 
